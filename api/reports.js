@@ -4,14 +4,23 @@ const PREFIX = 'reports/';
 const MAX_FILE_BYTES = 3 * 1024 * 1024; // ~3MB raw file (base64 body stays under Vercel's 4.5MB limit)
 const ALLOWED_EXT = /\.(xlsx|xls|csv)$/i;
 
+// The token is BLOB_READ_WRITE_TOKEN by default, but a custom env-var prefix
+// chosen when connecting the store changes the name — accept any match.
+function getBlobToken() {
+  if (process.env.BLOB_READ_WRITE_TOKEN) return process.env.BLOB_READ_WRITE_TOKEN;
+  const key = Object.keys(process.env).find(k => k.endsWith('_READ_WRITE_TOKEN'));
+  return key ? process.env[key] : null;
+}
+
 export default async function handler(req, res) {
   try {
-    if (!process.env.BLOB_READ_WRITE_TOKEN) {
+    const token = getBlobToken();
+    if (!token) {
       return res.status(503).json({ error: 'Storage is not configured yet. Connect a Blob store to this project in the Vercel dashboard.' });
     }
 
     if (req.method === 'GET') {
-      const { blobs } = await list({ prefix: PREFIX, limit: 500 });
+      const { blobs } = await list({ prefix: PREFIX, limit: 500, token });
       const reports = blobs
         .map(b => ({
           url: b.url,
@@ -37,6 +46,7 @@ export default async function handler(req, res) {
       const blob = await put(`${PREFIX}${Date.now()}-${safeName}`, buffer, {
         access: 'public',
         addRandomSuffix: false,
+        token,
       });
       return res.status(200).json({
         url: blob.url,
@@ -52,7 +62,7 @@ export default async function handler(req, res) {
       if (!/\.blob\.vercel-storage\.com\//.test(url) || !url.includes('/' + PREFIX)) {
         return res.status(400).json({ error: 'Invalid report url.' });
       }
-      await del(url);
+      await del(url, { token });
       return res.status(200).json({ ok: true });
     }
 
