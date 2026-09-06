@@ -1338,6 +1338,16 @@ function guessPlatform(row) {
   return { name: 'Unknown', color: 'unknown' };
 }
 
+function guessPlatformFromFileName(name) {
+  const s = String(name || '').toLowerCase();
+  for (const p of PLATFORM_RULES) {
+    for (const kw of p.keywords) {
+      if (s.includes(kw)) return { name: p.name, color: p.color };
+    }
+  }
+  return null;
+}
+
 /* ════════════════════════════════════════════════
    FILE HANDLING
 ════════════════════════════════════════════════ */
@@ -1387,6 +1397,8 @@ function processData(rows) {
   const cols = {};
   for (const k of Object.keys(COL_MAP)) cols[k] = findCol(headers, k);
 
+  const filePlatform = guessPlatformFromFileName(fileName);
+
   adsData = rows.map((row, i) => {
     const spend       = n(cols.spend       ? row[cols.spend]       : 0);
     const impressions = n(cols.impressions ? row[cols.impressions] : 0);
@@ -1416,6 +1428,7 @@ function processData(rows) {
       platform = match ? { name: match.name, color: match.color } : { name: String(row[cols.platform]), color: 'unknown' };
     } else {
       platform = guessPlatform(row);
+      if (platform.name === 'Unknown' && filePlatform) platform = filePlatform;
     }
 
     const adName    = cols.adName    ? String(row[cols.adName] || `Ad ${i+1}`)    : `Ad ${i+1}`;
@@ -1762,7 +1775,7 @@ function renderTable() {
       <td class="preview-cell">${previewCell(r.link, r.adName)}</td>
       <td>${r.link ? `<a href="${esc(r.link)}" target="_blank" rel="noopener">🔗 View</a>` : '<span style="color:var(--muted)">—</span>'}</td>
       <td style="color:var(--subtle)">${esc(r.objective) || '—'}</td>
-      <td class="number-cell" style="color:var(--accent)">${r.spend ? '$'+r.spend.toFixed(2) : '—'}</td>
+      <td class="number-cell" style="color:var(--accent)">${r.spend ? fmt.currency(r.spend) : '—'}</td>
       <td class="number-cell">${fmt.rawN(r.impressions)}</td>
       <td class="number-cell" style="color:var(--yellow)">${r.cpm ? '$'+r.cpm.toFixed(2) : '—'}</td>
       <td class="number-cell">${fmt.rawN(r.reach)}</td>
@@ -2578,7 +2591,7 @@ async function exportPPT() {
         T(String(ci*ROWS_PER+ri+1),          c(MUTED, { align:'center' })),
         T(truncate(r.adName, 30),             c(TEXT)),
         T(r.platform.name,                    c(TEXT, { align:'center' })),
-        T(r.spend  ? '$'+r.spend.toFixed(2):'—', c(BLUE,  { align:'right' })),
+        T(r.spend  ? fmt.currency(r.spend):'—', c(BLUE,  { align:'right' })),
         T(fmt.rawN(r.impressions),            c(TEXT,  { align:'right' })),
         T(r.cpm    ? '$'+r.cpm.toFixed(2):'—',   c(YELL,  { align:'right' })),
         T(fmt.rawN(r.reach),                  c(TEXT,  { align:'right' })),
@@ -2701,6 +2714,8 @@ function loadCompareBuffer(slot, arrayBuffer, name) {
       const cols = {};
       for (const k of Object.keys(COL_MAP)) cols[k] = findCol(headers, k);
 
+      const filePlatform = guessPlatformFromFileName(name);
+
       CMP[slot].ads = rows.map((row, i) => {
         const spend       = n(cols.spend       ? row[cols.spend]       : 0);
         const impressions = n(cols.impressions ? row[cols.impressions] : 0);
@@ -2722,7 +2737,10 @@ function loadCompareBuffer(slot, arrayBuffer, name) {
           const pv = String(row[cols.platform]).toLowerCase();
           const match = PLATFORM_RULES.find(p => p.keywords.some(k => pv.includes(k)));
           platform = match ? { name: match.name, color: match.color } : { name: String(row[cols.platform]), color:'unknown' };
-        } else { platform = guessPlatform(row); }
+        } else {
+          platform = guessPlatform(row);
+          if (platform.name === 'Unknown' && filePlatform) platform = filePlatform;
+        }
 
         const adName = cols.adName ? String(row[cols.adName] || `Ad ${i+1}`) : `Ad ${i+1}`;
         return { adName, platform, spend, impressions, reach, views, clicks, engagement, likes, comments, shares, saves, cpm, cpv };
@@ -2994,8 +3012,8 @@ function renderCompAdsTable() {
     <tr>
       <td style="max-width:220px;overflow:hidden;text-overflow:ellipsis;color:var(--text);font-weight:600;" title="${esc(name)}">${esc(truncate(name,36))}</td>
       <td>${(c||p) ? `<span class="platform-badge platform-${(c||p).platform.color}">${platformIcon((c||p).platform.name)} ${(c||p).platform.name}</span>` : '—'}</td>
-      <td style="color:var(--muted)">${cv(p?.spend, v=>'$'+v.toFixed(2))}</td>
-      <td style="color:var(--accent)">${cv(c?.spend, v=>'$'+v.toFixed(2))}</td>
+      <td style="color:var(--muted)">${cv(p?.spend, v=>fmt.currency(v))}</td>
+      <td style="color:var(--accent)">${cv(c?.spend, v=>fmt.currency(v))}</td>
       ${deltaCell(c?.spend,    p?.spend)}
       <td style="color:var(--muted)">${cv(p?.impressions, fmt.rawN)}</td>
       <td>${cv(c?.impressions, fmt.rawN)}</td>
