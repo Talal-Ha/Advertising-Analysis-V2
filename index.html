@@ -1,0 +1,3386 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Dalil Analytics</title>
+  <link rel="icon" type="image/png" href="Icon.png">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <script src="https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/pptxgenjs@3.12.0/dist/pptxgen.bundle.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #0b0f1a;
+      --surface: #111827;
+      --card: #1a2235;
+      --card-hover: #1f2d42;
+      --border: #1e3a5f;
+      --accent: #3b82f6;
+      --accent2: #8b5cf6;
+      --accent3: #06b6d4;
+      --green: #10b981;
+      --yellow: #f59e0b;
+      --red: #ef4444;
+      --text: #e2e8f0;
+      --muted: #64748b;
+      --subtle: #94a3b8;
+    }
+
+    body {
+      font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+    }
+
+    /* ── NAVBAR ───────────────────────────────── */
+    .navbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 6px 32px;
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+    .navbar-brand {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+    .navbar-logo {
+      height: 58px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .navbar-logo img {
+      height: 100%;
+      width: auto;
+      object-fit: contain;
+    }
+    .navbar-title { font-size: 22px; font-weight: 800; letter-spacing: -0.5px; }
+    .navbar-title span { color: var(--accent); }
+    .navbar-actions { display: flex; align-items: center; gap: 12px; }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 8px 16px;
+      border-radius: 8px;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      border: none;
+      transition: all 0.2s;
+    }
+    .btn-primary { background: var(--accent); color: #fff; }
+    .btn-primary:hover { background: #2563eb; }
+    .btn-ghost { background: transparent; color: var(--subtle); border: 1px solid var(--border); }
+    .btn-ghost:hover { background: var(--card); color: var(--text); }
+    .btn-sm { padding: 6px 12px; font-size: 12px; }
+    .btn-gemini { background: linear-gradient(135deg, #4285f4, #34a853, #fbbc05, #ea4335); background-size: 300%; color: #fff; animation: shimmer 4s ease infinite; }
+    .btn-gemini:hover { opacity: 0.9; }
+    @keyframes shimmer { 0%,100%{background-position:0%} 50%{background-position:100%} }
+
+    /* ── API KEY MODAL ───────────────────────── */
+    .modal-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.7);
+      z-index: 200;
+      align-items: center;
+      justify-content: center;
+    }
+    .modal-overlay.open { display: flex; }
+    .modal {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 32px;
+      width: 480px;
+      max-width: 90vw;
+    }
+    .modal h3 { font-size: 18px; font-weight: 700; margin-bottom: 8px; }
+    .modal p { font-size: 13px; color: var(--subtle); margin-bottom: 20px; line-height: 1.6; }
+    .modal-tabs { display: flex; gap: 8px; margin-bottom: 16px; }
+    .modal-tab {
+      flex: 1;
+      padding: 8px;
+      text-align: center;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 13px;
+      font-weight: 600;
+      border: 1px solid var(--border);
+      color: var(--muted);
+      background: transparent;
+      transition: all 0.2s;
+    }
+    .modal-tab.active { background: var(--accent); color: #fff; border-color: var(--accent); }
+    .form-group { margin-bottom: 16px; }
+    .form-label { display: block; font-size: 12px; font-weight: 600; color: var(--subtle); margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.5px; }
+    .form-input {
+      width: 100%;
+      padding: 10px 14px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      color: var(--text);
+      font-size: 14px;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+    .form-input:focus { border-color: var(--accent); }
+    .modal-actions { display: flex; gap: 8px; justify-content: flex-end; margin-top: 8px; }
+
+    /* ── UPLOAD ZONE ─────────────────────────── */
+    #uploadSection {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: calc(100vh - 65px);
+      padding: 40px 24px;
+    }
+    .upload-hero { text-align: center; max-width: 560px; }
+    .upload-hero h1 { font-size: 36px; font-weight: 800; letter-spacing: -1px; margin-bottom: 12px; }
+    .upload-hero h1 span { background: linear-gradient(135deg, var(--accent), var(--accent2)); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; color: transparent; }
+    .upload-hero p { font-size: 16px; color: var(--subtle); margin-bottom: 40px; line-height: 1.6; }
+
+    .upload-zone {
+      width: 100%;
+      max-width: 520px;
+      border: 2px dashed var(--border);
+      border-radius: 20px;
+      padding: 60px 40px;
+      text-align: center;
+      cursor: pointer;
+      transition: all 0.3s;
+      background: var(--surface);
+      position: relative;
+    }
+    .upload-zone:hover, .upload-zone.drag-over {
+      border-color: var(--accent);
+      background: rgba(59,130,246,0.05);
+    }
+    .upload-zone input[type="file"] {
+      position: absolute;
+      inset: 0;
+      opacity: 0;
+      cursor: pointer;
+      width: 100%;
+      height: 100%;
+    }
+    .upload-icon {
+      width: 72px; height: 72px;
+      background: linear-gradient(135deg, rgba(59,130,246,0.2), rgba(139,92,246,0.2));
+      border-radius: 20px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin: 0 auto 20px;
+      font-size: 32px;
+    }
+    .upload-zone h3 { font-size: 18px; font-weight: 700; margin-bottom: 8px; }
+    .upload-zone p { font-size: 14px; color: var(--muted); }
+    .upload-zone .badge {
+      display: inline-block;
+      margin-top: 16px;
+      padding: 4px 12px;
+      background: rgba(59,130,246,0.15);
+      color: var(--accent);
+      border-radius: 100px;
+      font-size: 12px;
+      font-weight: 600;
+    }
+
+    /* ── DASHBOARD ───────────────────────────── */
+    #dashboard { display: none; padding: 0; }
+    .dashboard-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 20px 32px;
+      border-bottom: 1px solid var(--border);
+      background: var(--surface);
+    }
+    .dashboard-header h2 { font-size: 16px; font-weight: 700; }
+    .dashboard-header p { font-size: 12px; color: var(--muted); margin-top: 2px; }
+    .file-badge {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 6px 12px;
+      font-size: 13px;
+      color: var(--subtle);
+    }
+    .file-badge span { color: var(--text); font-weight: 600; }
+
+    /* ── META BAR ────────────────────────────── */
+    .meta-bar {
+      display: flex;
+      align-items: center;
+      gap: 0;
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      padding: 0;
+      overflow-x: auto;
+    }
+    .meta-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 14px 28px;
+      border-right: 1px solid var(--border);
+      flex-shrink: 0;
+    }
+    .meta-item:last-child { border-right: none; }
+    .meta-icon {
+      width: 34px; height: 34px;
+      border-radius: 9px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 16px;
+      flex-shrink: 0;
+    }
+    .meta-icon-blue   { background: rgba(59,130,246,0.15); }
+    .meta-icon-purple { background: rgba(139,92,246,0.15); }
+    .meta-icon-green  { background: rgba(16,185,129,0.15); }
+    .meta-label { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.7px; color: var(--muted); }
+    .meta-value { font-size: 14px; font-weight: 700; color: var(--text); margin-top: 2px; }
+    .platform-pill {
+      display: inline-flex; align-items: center; gap: 5px;
+      padding: 2px 10px; border-radius: 100px;
+      font-size: 13px; font-weight: 700;
+    }
+
+    /* ── KPI CARDS ───────────────────────────── */
+    .kpi-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 1px;
+      background: var(--border);
+      border-bottom: 1px solid var(--border);
+    }
+    @media(max-width: 900px) { .kpi-grid { grid-template-columns: repeat(2,1fr); } }
+    @media(max-width: 500px) { .kpi-grid { grid-template-columns: 1fr; } }
+
+    .kpi-card {
+      background: var(--surface);
+      padding: 24px 28px;
+      transition: background 0.2s;
+    }
+    .kpi-card:hover { background: var(--card); }
+    .kpi-label {
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+      color: var(--muted);
+      margin-bottom: 8px;
+    }
+    .kpi-value {
+      font-size: 28px;
+      font-weight: 800;
+      letter-spacing: -1px;
+      line-height: 1;
+    }
+    .kpi-sub {
+      font-size: 12px;
+      color: var(--muted);
+      margin-top: 6px;
+    }
+    .kpi-accent-blue { color: var(--accent); }
+    .kpi-accent-purple { color: var(--accent2); }
+    .kpi-accent-cyan { color: var(--accent3); }
+    .kpi-accent-green { color: var(--green); }
+    .kpi-accent-yellow { color: var(--yellow); }
+    .kpi-accent-red { color: var(--red); }
+
+    /* ── CHARTS ──────────────────────────────── */
+    .section { padding: 32px; }
+    .section-title {
+      font-size: 13px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+      color: var(--muted);
+      margin-bottom: 20px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .section-title::after {
+      content: '';
+      flex: 1;
+      height: 1px;
+      background: var(--border);
+    }
+
+    .charts-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 20px;
+    }
+    @media(max-width: 900px) { .charts-grid { grid-template-columns: 1fr; } }
+
+    .chart-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 24px;
+    }
+    .chart-card-title {
+      font-size: 14px;
+      font-weight: 700;
+      margin-bottom: 4px;
+    }
+    .chart-card-sub {
+      font-size: 12px;
+      color: var(--muted);
+      margin-bottom: 20px;
+    }
+    .chart-wrap { position: relative; height: 280px; }
+
+    /* ── TABLE ───────────────────────────────── */
+    .table-section { padding: 0 32px 32px; }
+    .table-wrapper {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      overflow: auto;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13px;
+      min-width: 1400px;
+    }
+    thead tr {
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+    }
+    th {
+      padding: 12px 14px;
+      text-align: left;
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.6px;
+      color: var(--muted);
+      white-space: nowrap;
+    }
+    tbody tr {
+      border-bottom: 1px solid rgba(30,58,95,0.5);
+      transition: background 0.15s;
+    }
+    tbody tr:last-child { border-bottom: none; }
+    tbody tr:hover { background: rgba(59,130,246,0.05); }
+    td {
+      padding: 11px 14px;
+      color: var(--text);
+      white-space: nowrap;
+    }
+    td a { color: var(--accent); text-decoration: none; font-size: 12px; }
+    td a:hover { text-decoration: underline; }
+
+    .platform-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      padding: 3px 9px;
+      border-radius: 100px;
+      font-size: 11px;
+      font-weight: 700;
+      white-space: nowrap;
+    }
+    .platform-facebook { background: rgba(24,119,242,0.2); color: #1877f2; }
+    .platform-instagram { background: rgba(225,48,108,0.2); color: #e1306c; }
+    .platform-tiktok { background: rgba(254,44,85,0.2); color: #fe2c55; }
+    .platform-youtube { background: rgba(255,0,0,0.2); color: #ff0000; }
+    .platform-linkedin { background: rgba(10,102,194,0.2); color: #0a66c2; }
+    .platform-twitter { background: rgba(29,155,240,0.2); color: #1d9bf0; }
+    .platform-snapchat { background: rgba(255,252,0,0.2); color: #d4c800; }
+    .platform-google { background: rgba(66,133,244,0.2); color: #4285f4; }
+    .platform-x { background: rgba(255,255,255,0.1); color: #e7e9ea; }
+    .platform-unknown { background: rgba(100,116,139,0.2); color: var(--subtle); }
+
+    /* ── AI ANALYSIS ─────────────────────────── */
+    .ai-section { padding: 0 32px 40px; }
+    .ai-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      overflow: hidden;
+    }
+    .ai-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 20px 24px;
+      border-bottom: 1px solid var(--border);
+      background: linear-gradient(90deg, rgba(66,133,244,0.08), rgba(52,168,83,0.08));
+    }
+    .ai-header-left { display: flex; align-items: center; gap: 12px; }
+    .ai-logo {
+      width: 38px; height: 38px;
+      background: linear-gradient(135deg, #4285f4, #34a853);
+      border-radius: 10px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 18px;
+    }
+    .ai-header h3 { font-size: 15px; font-weight: 700; }
+    .ai-header p { font-size: 12px; color: var(--muted); }
+
+    .ai-body { padding: 28px 24px; }
+    .ai-placeholder {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 48px;
+      text-align: center;
+      color: var(--muted);
+    }
+    .ai-placeholder p { font-size: 14px; margin-top: 12px; }
+
+    .ai-content { display: none; }
+    .ai-tabs { display: flex; gap: 4px; margin-bottom: 24px; flex-wrap: wrap; }
+    .ai-tab {
+      padding: 7px 16px;
+      border-radius: 8px;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      border: 1px solid var(--border);
+      color: var(--muted);
+      background: transparent;
+      transition: all 0.2s;
+    }
+    .ai-tab.active { background: var(--accent); color: #fff; border-color: var(--accent); }
+
+    .ai-panel { display: none; }
+    .ai-panel.active { display: block; }
+    .ai-panel h4 {
+      font-size: 15px;
+      font-weight: 700;
+      margin-bottom: 12px;
+      color: var(--text);
+    }
+    .ai-panel p, .ai-panel li {
+      font-size: 14px;
+      line-height: 1.75;
+      color: var(--subtle);
+      margin-bottom: 8px;
+    }
+    .ai-panel ul, .ai-panel ol {
+      padding-left: 20px;
+    }
+    .ai-panel strong { color: var(--text); font-weight: 600; }
+    .ai-panel .highlight-box {
+      background: rgba(59,130,246,0.08);
+      border-left: 3px solid var(--accent);
+      padding: 12px 16px;
+      border-radius: 0 8px 8px 0;
+      margin-bottom: 12px;
+    }
+
+    .ai-loading {
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      padding: 48px;
+      text-align: center;
+    }
+    .spinner {
+      width: 40px; height: 40px;
+      border: 3px solid var(--border);
+      border-top-color: var(--accent);
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .ai-loading p { margin-top: 16px; font-size: 14px; color: var(--muted); }
+
+    /* ── MISC ────────────────────────────────── */
+    .divider { height: 1px; background: var(--border); margin: 0 32px; }
+
+    .number-cell { text-align: right; font-variant-numeric: tabular-nums; font-family: 'Courier New', monospace; }
+    .no-data { text-align: center; color: var(--muted); font-size: 13px; padding: 40px; }
+
+    .toast {
+      position: fixed;
+      bottom: 24px;
+      right: 24px;
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 12px 18px;
+      font-size: 13px;
+      z-index: 999;
+      animation: slideUp 0.3s ease;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .toast.error { border-color: var(--red); }
+    .toast.success { border-color: var(--green); }
+    @keyframes slideUp { from { transform: translateY(20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+
+    /* ── PREVIEW THUMBNAIL ───────────────────── */
+    .preview-thumb {
+      width: 90px; height: 58px;
+      object-fit: cover;
+      border-radius: 7px;
+      border: 1px solid var(--border);
+      display: block;
+      cursor: zoom-in;
+      transition: transform 0.2s, border-color 0.2s;
+      background: var(--surface);
+    }
+    .preview-thumb:hover { transform: scale(1.07); border-color: var(--accent); }
+    .preview-empty {
+      width: 90px; height: 58px;
+      border-radius: 7px;
+      border: 1px dashed var(--border);
+      display: flex; align-items: center; justify-content: center;
+      color: var(--muted); font-size: 20px;
+    }
+    .preview-cell { padding: 6px 10px !important; }
+
+    /* ── PREVIEW LIGHTBOX ────────────────────── */
+    .preview-overlay {
+      position: fixed; inset: 0;
+      background: rgba(0,0,0,0.88);
+      z-index: 300;
+      display: flex; align-items: center; justify-content: center;
+      backdrop-filter: blur(6px);
+      animation: fadeIn 0.18s ease;
+    }
+    @keyframes fadeIn { from { opacity: 0 } to { opacity: 1 } }
+    .preview-lightbox {
+      position: relative;
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 18px;
+      padding: 20px;
+      max-width: 92vw;
+      display: flex; flex-direction: column;
+      align-items: center; gap: 14px;
+      box-shadow: 0 24px 64px rgba(0,0,0,0.6);
+    }
+    .preview-lightbox img {
+      max-width: min(860px, 88vw);
+      max-height: 72vh;
+      border-radius: 10px;
+      object-fit: contain;
+      display: block;
+    }
+    .preview-lightbox-footer { display: flex; gap: 10px; align-items: center; }
+    .preview-lightbox-label {
+      font-size: 12px; color: var(--muted);
+      max-width: 500px; overflow: hidden;
+      text-overflow: ellipsis; white-space: nowrap;
+    }
+    .preview-close {
+      position: absolute; top: 10px; right: 12px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      color: var(--text);
+      border-radius: 50%;
+      width: 30px; height: 30px;
+      font-size: 14px; cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      transition: background 0.15s;
+    }
+    .preview-close:hover { background: rgba(239,68,68,0.2); border-color: var(--red); color: var(--red); }
+
+    /* ── TAB NAVIGATION ─────────────────────── */
+    .tab-nav {
+      display: flex; align-items: center; gap: 4px;
+      padding: 0 32px;
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      position: sticky; top: 65px; z-index: 90;
+    }
+    .tab-btn {
+      display: flex; align-items: center; gap: 7px;
+      padding: 0 20px; height: 44px;
+      font-size: 13px; font-weight: 600; color: var(--muted);
+      background: transparent; border: none;
+      border-bottom: 2px solid transparent;
+      cursor: pointer; transition: color 0.2s, border-color 0.2s; white-space: nowrap;
+    }
+    .tab-btn:hover { color: var(--subtle); }
+    .tab-btn.active { color: var(--text); border-bottom-color: var(--accent); }
+
+    /* ── COMPARISON SECTION ──────────────────── */
+    #tabComparison { display: none; }
+    .comp-hero { display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: calc(100vh - 110px); padding: 40px 24px; gap: 32px; }
+    .comp-hero h2 { font-size: 36px; font-weight: 800; letter-spacing: -1px; margin-bottom: 12px; }
+    .comp-hero h2 span { background: linear-gradient(135deg,var(--accent),var(--accent2)); -webkit-background-clip:text; background-clip:text; -webkit-text-fill-color:transparent; color:transparent; }
+    .comp-hero p { font-size: 16px; color: var(--subtle); text-align: center; max-width: 560px; line-height: 1.6; margin-bottom: 0; }
+    .comp-upload-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; width: 100%; max-width: 860px; align-items: start; }
+    @media(max-width:680px) { .comp-upload-grid { grid-template-columns:1fr; } }
+    .comp-upload-card { background: var(--surface); border: 1px solid var(--border); border-radius: 16px; padding: 24px; }
+    .comp-upload-card .card-head { display: flex; align-items: center; gap: 10px; margin-bottom: 16px; }
+    .comp-upload-card .card-head-icon { width: 34px; height: 34px; border-radius: 9px; display: flex; align-items: center; justify-content: center; font-size: 16px; }
+    .icon-curr { background: rgba(59,130,246,0.2); }
+    .icon-prev { background: rgba(100,116,139,0.2); }
+    .comp-upload-card h3 { font-size: 14px; font-weight: 700; }
+    .comp-upload-card p.sub { font-size: 11px; color: var(--muted); margin-top: 1px; }
+    .comp-drop-zone { border: 2px dashed var(--border); border-radius: 10px; padding: 28px 16px; cursor: pointer; transition: all 0.25s; background: var(--bg); position: relative; text-align: center; }
+    .comp-drop-zone:hover, .comp-drop-zone.drag-over { border-color: var(--accent); background: rgba(59,130,246,0.05); }
+    .comp-drop-zone input[type="file"] { position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; height: 100%; }
+    .comp-drop-zone .di { font-size: 26px; margin-bottom: 8px; }
+    .comp-drop-zone .dt { font-size: 13px; font-weight: 600; color: var(--subtle); }
+    .comp-drop-zone .ds { font-size: 11px; color: var(--muted); margin-top: 3px; }
+    .comp-file-done { display: flex; align-items: center; gap: 8px; background: rgba(16,185,129,0.1); border: 1px solid rgba(16,185,129,0.3); border-radius: 8px; padding: 9px 12px; margin-top: 12px; font-size: 12px; color: var(--green); font-weight: 600; }
+    .comp-file-done button { margin-left: auto; background: none; border: none; color: var(--muted); cursor: pointer; font-size: 13px; padding: 1px 5px; }
+    .comp-file-done button:hover { color: var(--red); }
+    .vs-divider { display: flex; align-items: center; justify-content: center; font-size: 15px; font-weight: 800; color: var(--border); }
+    @media(max-width:680px) { .vs-divider { display: none; } }
+
+    /* Comparison dashboard */
+    #compDashboard { display: none; }
+    .comp-period-bar { display: flex; align-items: center; gap: 14px; padding: 14px 32px; background: var(--surface); border-bottom: 1px solid var(--border); flex-wrap: wrap; }
+    .comp-period-bar .pbar-title { font-size: 13px; font-weight: 700; color: var(--muted); margin-right: 4px; }
+    .period-pill { display: inline-flex; align-items: center; gap: 6px; padding: 5px 13px; border-radius: 100px; font-size: 12px; font-weight: 700; }
+    .period-curr { background: rgba(59,130,246,0.15); color: var(--accent); }
+    .period-prev { background: rgba(100,116,139,0.15); color: var(--muted); }
+    .period-dot  { width: 8px; height: 8px; border-radius: 50%; display: inline-block; flex-shrink: 0; }
+
+    /* KPI comparison */
+    .comp-kpi-grid { display: grid; grid-template-columns: repeat(4,1fr); gap: 1px; background: var(--border); border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); }
+    @media(max-width:900px) { .comp-kpi-grid { grid-template-columns: repeat(2,1fr); } }
+    .comp-kpi-card { background: var(--surface); padding: 20px 22px 16px; transition: background 0.2s; }
+    .comp-kpi-card:hover { background: var(--card); }
+    .comp-kpi-label { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.8px; color: var(--muted); margin-bottom: 10px; }
+    .comp-kpi-row { display: flex; align-items: flex-end; gap: 10px; margin-bottom: 8px; }
+    .comp-kpi-curr { font-size: 22px; font-weight: 800; letter-spacing: -0.5px; line-height: 1; }
+    .comp-kpi-prev { font-size: 12px; color: var(--muted); font-weight: 600; padding-bottom: 2px; }
+    .comp-kpi-footer { display: flex; align-items: center; gap: 6px; }
+    .change-badge { display: inline-flex; align-items: center; gap: 3px; padding: 2px 8px; border-radius: 100px; font-size: 11px; font-weight: 700; }
+    .change-up   { background: rgba(16,185,129,0.15); color: var(--green); }
+    .change-down { background: rgba(239,68,68,0.15);  color: var(--red); }
+    .change-flat { background: rgba(100,116,139,0.15); color: var(--muted); }
+    .change-abs  { font-size: 10px; color: var(--muted); }
+
+    /* Comparison charts */
+    .comp-charts-grid { display: grid; grid-template-columns: repeat(2,1fr); gap: 20px; }
+    @media(max-width:900px) { .comp-charts-grid { grid-template-columns:1fr; } }
+
+    /* Summary metrics table */
+    .comp-summary-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    .comp-summary-table th { padding: 11px 16px; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.6px; color: var(--muted); background: var(--surface); border-bottom: 1px solid var(--border); }
+    .comp-summary-table td { padding: 12px 16px; border-bottom: 1px solid rgba(30,58,95,0.4); }
+    .comp-summary-table tbody tr:last-child td { border-bottom: none; }
+    .comp-summary-table tbody tr:hover { background: rgba(59,130,246,0.04); }
+
+    /* Ads comparison table */
+    .comp-ads-table { width: 100%; border-collapse: collapse; font-size: 12px; min-width: 960px; }
+    .comp-ads-table th { padding: 10px 12px; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: var(--muted); background: var(--surface); border-bottom: 1px solid var(--border); white-space: nowrap; }
+    .comp-ads-table td { padding: 9px 12px; border-bottom: 1px solid rgba(30,58,95,0.4); white-space: nowrap; }
+    .comp-ads-table tbody tr:hover { background: rgba(59,130,246,0.04); }
+    .comp-ads-table tbody tr:last-child td { border-bottom: none; }
+    .comp-ads-table .group-header td { background: var(--surface); color: var(--muted); font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.6px; padding: 7px 12px; }
+
+    /* scrollbar */
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+    ::-webkit-scrollbar-thumb:hover { background: var(--muted); }
+
+    /* ── SAVED REPORTS ───────────────────────── */
+    .saved-reports {
+      width: 100%;
+      max-width: 520px;
+      margin-top: 24px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      overflow: hidden;
+      text-align: left;
+    }
+    .saved-reports-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 14px 18px;
+      border-bottom: 1px solid var(--border);
+    }
+    .saved-reports-head h3 { font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.7px; color: var(--subtle); }
+    .saved-reports-list { max-height: 300px; overflow-y: auto; }
+    .saved-report-row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 12px 18px;
+      border-bottom: 1px solid rgba(30,58,95,0.5);
+      cursor: pointer;
+      transition: background 0.15s;
+    }
+    .saved-report-row:last-child { border-bottom: none; }
+    .saved-report-row:hover { background: rgba(59,130,246,0.06); }
+    .saved-report-icon {
+      width: 34px; height: 34px;
+      border-radius: 9px;
+      background: rgba(16,185,129,0.15);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 15px;
+      flex-shrink: 0;
+    }
+    .saved-report-info { flex: 1; min-width: 0; }
+    .saved-report-name {
+      font-size: 13px; font-weight: 600; color: var(--text);
+      overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+    }
+    .saved-report-meta { font-size: 11px; color: var(--muted); margin-top: 2px; }
+    .saved-report-del {
+      background: none; border: none; color: var(--muted);
+      cursor: pointer; font-size: 14px; padding: 4px 8px;
+      border-radius: 6px; flex-shrink: 0;
+      transition: all 0.15s;
+    }
+    .saved-report-del:hover { color: var(--red); background: rgba(239,68,68,0.1); }
+    .saved-reports-empty { padding: 24px 18px; text-align: center; font-size: 13px; color: var(--muted); }
+
+    /* Saved picker modal (comparison tab) */
+    .saved-picker { max-height: 320px; overflow-y: auto; margin: 0 -32px; }
+    .saved-picker .saved-report-row { padding: 12px 32px; }
+
+    /* ── EXPORT DROPDOWN ─────────────────────── */
+    .export-wrap { position: relative; }
+    .btn-export {
+      background: linear-gradient(135deg, #1e3a5f, #1a2235);
+      color: var(--text);
+      border: 1px solid var(--border);
+    }
+    .btn-export:hover { background: var(--card-hover); border-color: var(--accent); }
+    .export-menu {
+      display: none;
+      position: absolute;
+      right: 0;
+      top: calc(100% + 8px);
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      overflow: hidden;
+      min-width: 210px;
+      z-index: 150;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+    }
+    .export-menu.open { display: block; }
+    .export-menu-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      width: 100%;
+      padding: 12px 16px;
+      text-align: left;
+      background: none;
+      border: none;
+      color: var(--text);
+      font-size: 13px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: background 0.15s;
+      border-bottom: 1px solid var(--border);
+    }
+    .export-menu-item:last-child { border-bottom: none; }
+    .export-menu-item:hover { background: rgba(59,130,246,0.08); }
+    .export-menu-item .export-icon {
+      width: 30px; height: 30px;
+      border-radius: 7px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 15px;
+      flex-shrink: 0;
+    }
+    .export-icon-pdf { background: rgba(239,68,68,0.15); }
+    .export-icon-ppt { background: rgba(245,158,11,0.15); }
+    .export-menu-item .export-text { line-height: 1.3; }
+    .export-menu-item .export-text small { display: block; color: var(--muted); font-size: 11px; }
+
+  </style>
+</head>
+<body>
+
+<!-- ── NAVBAR ─────────────────────────────────── -->
+<nav class="navbar">
+  <div class="navbar-brand">
+    <div class="navbar-logo"><img src="Logo.png" alt="Dalil Analytics"></div>
+    <div class="navbar-title">Dalil <span>Analytics</span></div>
+  </div>
+  <div class="navbar-actions">
+    <label class="btn btn-primary btn-sm" style="cursor:pointer;">
+      📂 New File
+      <input type="file" accept=".xlsx,.xls,.csv" style="display:none;" onchange="handleFileInput(this)">
+    </label>
+  </div>
+</nav>
+
+<!-- ── TAB NAVIGATION ─────────────────────────── -->
+<div class="tab-nav" id="tabNav">
+  <button class="tab-btn active" id="tabBtnDashboard" onclick="switchTab('dashboard')">
+    📊 Insights
+  </button>
+  <button class="tab-btn" id="tabBtnComparison" onclick="switchTab('comparison')">
+    🆚 Comparison
+  </button>
+</div>
+
+<!-- ── DASHBOARD TAB ──────────────────────────── -->
+<div id="tabDashboard">
+
+<!-- ── UPLOAD SECTION ─────────────────────────── -->
+<div id="uploadSection">
+  <div class="upload-hero">
+    <h1>Advertising <span>Insights</span></h1>
+    <p>Upload your advertising data and turn raw numbers into clear performance insights, spend breakdowns, smart recommendations, and interactive visual reports.</p>
+
+    <div class="upload-zone" id="dropZone">
+      <input type="file" accept=".xlsx,.xls,.csv" id="fileInput" onchange="handleFileInput(this)" />
+      <div class="upload-icon">📁</div>
+      <h3>Drop your Excel file here</h3>
+      <p>or click to browse your files</p>
+      <div class="badge">.xlsx · .xls · .csv</div>
+    </div>
+
+    <!-- Saved Reports -->
+    <div class="saved-reports" id="savedReportsCard" style="display:none;">
+      <div class="saved-reports-head">
+        <h3>💾 Saved Reports</h3>
+        <button class="btn btn-ghost btn-sm" onclick="fetchSavedReports(true)">🔄 Refresh</button>
+      </div>
+      <div class="saved-reports-list" id="savedReportsList">
+        <div class="saved-reports-empty">Loading saved reports…</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── DASHBOARD ───────────────────────────────── -->
+<div id="dashboard">
+
+  <!-- Header -->
+  <div class="dashboard-header">
+    <div>
+      <h2 id="dashTitle">Advertising Dashboard</h2>
+      <p id="dashSub">0 ads loaded</p>
+    </div>
+    <div style="display:flex;gap:10px;align-items:center;">
+      <div class="file-badge">📄 <span id="fileNameBadge">—</span></div>
+      <button class="btn btn-primary btn-sm" id="saveReportBtn" onclick="saveCurrentReport()">💾 Save to Site</button>
+      <div class="export-wrap" id="exportWrap">
+        <button class="btn btn-export btn-sm" onclick="toggleExportMenu(event)">📤 Export ▾</button>
+        <div class="export-menu" id="exportMenu">
+          <button class="export-menu-item" onclick="exportPDF()">
+            <div class="export-icon export-icon-pdf">📄</div>
+            <div class="export-text">Export as PDF<small>Print-ready full report</small></div>
+          </button>
+          <button class="export-menu-item" onclick="exportPPT()">
+            <div class="export-icon export-icon-ppt">📊</div>
+            <div class="export-text">Export as PowerPoint<small>Slides with charts & data</small></div>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Meta Bar -->
+  <div class="meta-bar" id="metaBar">
+    <div class="meta-item">
+      <div class="meta-icon meta-icon-blue">📅</div>
+      <div>
+        <div class="meta-label">Reporting Date</div>
+        <div class="meta-value" id="metaReportDate">—</div>
+      </div>
+    </div>
+    <div class="meta-item">
+      <div class="meta-icon meta-icon-purple">📊</div>
+      <div>
+        <div class="meta-label">Advertising Period</div>
+        <div class="meta-value" id="metaInsightsDate">—</div>
+      </div>
+    </div>
+    <div class="meta-item">
+      <div class="meta-icon meta-icon-green">📢</div>
+      <div>
+        <div class="meta-label">Platform</div>
+        <div class="meta-value" id="metaPlatform">—</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- KPI Cards -->
+  <div class="kpi-grid">
+    <div class="kpi-card">
+      <div class="kpi-label">Total Spend</div>
+      <div class="kpi-value kpi-accent-blue" id="kpiSpend">—</div>
+      <div class="kpi-sub">Across all campaigns</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-label">Total Impressions</div>
+      <div class="kpi-value kpi-accent-purple" id="kpiImpressions">—</div>
+      <div class="kpi-sub">Total ad displays</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-label">Total Reach</div>
+      <div class="kpi-value kpi-accent-cyan" id="kpiReach">—</div>
+      <div class="kpi-sub">Unique accounts reached</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-label">Total Views</div>
+      <div class="kpi-value kpi-accent-green" id="kpiViews">—</div>
+      <div class="kpi-sub">Video views</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-label">Avg CPM</div>
+      <div class="kpi-value kpi-accent-yellow" id="kpiCpm">—</div>
+      <div class="kpi-sub">Cost per 1,000 impressions</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-label">Avg CPV</div>
+      <div class="kpi-value kpi-accent-red" id="kpiCpv">—</div>
+      <div class="kpi-sub">Cost per view</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-label">Total Clicks</div>
+      <div class="kpi-value kpi-accent-blue" id="kpiClicks">—</div>
+      <div class="kpi-sub">Link & ad clicks</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-label">Total Engagement</div>
+      <div class="kpi-value kpi-accent-purple" id="kpiEngagement">—</div>
+      <div class="kpi-sub">Likes, comments, shares & saves</div>
+    </div>
+  </div>
+
+  <!-- Charts -->
+  <div class="section">
+    <div class="section-title">Performance Charts</div>
+    <div class="charts-grid">
+      <div class="chart-card">
+        <div class="chart-card-title">Spend per Ad</div>
+        <div class="chart-card-sub">Total spend distribution across ads</div>
+        <div class="chart-wrap"><canvas id="spendChart"></canvas></div>
+      </div>
+      <div class="chart-card">
+        <div class="chart-card-title">CPM vs CPV per Ad</div>
+        <div class="chart-card-sub">Cost efficiency comparison by ad</div>
+        <div class="chart-wrap"><canvas id="cpmCpvChart"></canvas></div>
+      </div>
+      <div class="chart-card">
+        <div class="chart-card-title">Engagement Breakdown</div>
+        <div class="chart-card-sub">Likes, comments, shares & saves</div>
+        <div class="chart-wrap"><canvas id="engagementChart"></canvas></div>
+      </div>
+      <div class="chart-card">
+        <div class="chart-card-title">Impressions vs Reach vs Views</div>
+        <div class="chart-card-sub">Audience metrics per ad</div>
+        <div class="chart-wrap"><canvas id="audienceChart"></canvas></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="divider"></div>
+
+  <!-- All Ads Table -->
+  <div class="table-section" style="padding-top:32px;">
+    <div class="section-title">All Ads</div>
+    <div class="table-wrapper">
+      <table id="adsTable">
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Platform</th>
+            <th>Ad Name</th>
+            <th>Preview</th>
+            <th>Link</th>
+            <th>Objective</th>
+            <th>Spend</th>
+            <th>Impressions</th>
+            <th>CPM</th>
+            <th>Reach</th>
+            <th>Frequency</th>
+            <th>Views</th>
+            <th>CPV</th>
+            <th>Clicks</th>
+            <th>Engagement</th>
+            <th>Likes</th>
+            <th>Comments</th>
+            <th>Shares</th>
+            <th>Saves</th>
+          </tr>
+        </thead>
+        <tbody id="adsTableBody">
+          <tr><td colspan="18" class="no-data">No data loaded yet.</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="divider" style="margin-top:32px;"></div>
+
+  <!-- AI Analysis -->
+  <div class="ai-section" style="padding-top:32px;">
+    <div class="section-title">AI-Powered Insights</div>
+    <div class="ai-card">
+      <div class="ai-header">
+        <div class="ai-header-left">
+          <div class="ai-logo">✨</div>
+          <div>
+            <h3>AI Ad Analysis</h3>
+            <p id="aiProviderLabel">Smart analysis engine · Click "Generate Analysis" to begin</p>
+          </div>
+        </div>
+        <button class="btn btn-gemini btn-sm" onclick="runAiAnalysis()">Generate Analysis</button>
+      </div>
+      <div class="ai-body">
+        <div class="ai-placeholder" id="aiPlaceholder">
+          <div style="font-size:48px;">🤖</div>
+          <p>Upload your data and click <strong style="color:var(--text)">Generate AI Analysis</strong> to get intelligent insights about your ad performance.</p>
+        </div>
+        <div class="ai-loading" id="aiLoading">
+          <div class="spinner"></div>
+          <p>Analyzing your advertising data…</p>
+        </div>
+        <div class="ai-content" id="aiContent">
+          <div class="ai-tabs">
+            <button class="ai-tab active" onclick="switchAiTab('analysis', this)">📊 Ad Analysis</button>
+            <button class="ai-tab" onclick="switchAiTab('notes', this)">📝 Key Notes</button>
+            <button class="ai-tab" onclick="switchAiTab('recommendations', this)">💡 Recommendations</button>
+          </div>
+          <div class="ai-panel active" id="panel-analysis"><p style="color:var(--muted)">Loading…</p></div>
+          <div class="ai-panel" id="panel-notes"><p style="color:var(--muted)">Loading…</p></div>
+          <div class="ai-panel" id="panel-recommendations"><p style="color:var(--muted)">Loading…</p></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div><!-- /dashboard -->
+
+</div><!-- /tabDashboard -->
+
+<!-- ══════════════════════════════════════════════
+     COMPARISON TAB
+══════════════════════════════════════════════ -->
+<div id="tabComparison">
+
+  <!-- Upload Hero (shown when files not yet loaded) -->
+  <div class="comp-hero" id="compHero">
+    <div style="text-align:center;">
+      <h2>Compare <span>Performance</span></h2>
+      <p>Upload two advertising files to compare spend, reach, CPM, CPV, engagement, and overall performance across time periods.</p>
+    </div>
+
+    <div class="comp-upload-grid">
+      <!-- Selected Period -->
+      <div class="comp-upload-card">
+        <div class="card-head">
+          <div class="card-head-icon icon-curr">📅</div>
+          <div>
+            <h3>Selected Period</h3>
+            <p class="sub">e.g. This month's export</p>
+          </div>
+        </div>
+        <div class="comp-drop-zone" id="dropCurr">
+          <input type="file" accept=".xlsx,.xls,.csv" onchange="handleCompareFile('curr', this)">
+          <div class="di">📂</div>
+          <div class="dt">Drop file or click to browse</div>
+          <div class="ds">.xlsx · .xls · .csv</div>
+        </div>
+        <button class="btn btn-ghost btn-sm" style="width:100%;justify-content:center;margin-top:10px;" onclick="openSavedPicker('curr')">💾 Pick from saved reports</button>
+        <div class="comp-file-done" id="fileDoneCurr" style="display:none;">
+          <span>✅</span>
+          <span id="fileNameCurr">—</span>
+          <button onclick="clearCompareFile('curr')" title="Remove">✕</button>
+        </div>
+      </div>
+
+      <!-- Comparison Period -->
+      <div class="comp-upload-card">
+        <div class="card-head">
+          <div class="card-head-icon icon-prev">🗓️</div>
+          <div>
+            <h3>Comparison Period</h3>
+            <p class="sub">e.g. Last month's export</p>
+          </div>
+        </div>
+        <div class="comp-drop-zone" id="dropPrev">
+          <input type="file" accept=".xlsx,.xls,.csv" onchange="handleCompareFile('prev', this)">
+          <div class="di">📂</div>
+          <div class="dt">Drop file or click to browse</div>
+          <div class="ds">.xlsx · .xls · .csv</div>
+        </div>
+        <button class="btn btn-ghost btn-sm" style="width:100%;justify-content:center;margin-top:10px;" onclick="openSavedPicker('prev')">💾 Pick from saved reports</button>
+        <div class="comp-file-done" id="fileDonePrev" style="display:none;">
+          <span>✅</span>
+          <span id="fileNamePrev">—</span>
+          <button onclick="clearCompareFile('prev')" title="Remove">✕</button>
+        </div>
+      </div>
+    </div><!-- /comp-upload-grid -->
+  </div><!-- /compHero -->
+
+  <!-- ── COMPARISON DASHBOARD (shown after both files loaded) ── -->
+  <div id="compDashboard">
+
+    <!-- Period bar -->
+    <div class="comp-period-bar">
+      <span class="pbar-title">Comparing:</span>
+      <span class="period-pill period-curr"><span class="period-dot" style="background:var(--accent)"></span><span id="compLabelCurr">Selected Period</span></span>
+      <span style="color:var(--muted);font-size:12px;">vs</span>
+      <span class="period-pill period-prev"><span class="period-dot" style="background:var(--muted)"></span><span id="compLabelPrev">Comparison Period</span></span>
+      <div style="margin-left:auto;display:flex;gap:10px;align-items:center;">
+        <button class="btn btn-ghost btn-sm" onclick="resetComparison()">🔄 Reset</button>
+      </div>
+    </div>
+
+    <!-- KPI Comparison Cards -->
+    <div class="comp-kpi-grid" id="compKpiGrid">
+      <!-- filled by JS -->
+    </div>
+
+    <!-- Charts -->
+    <div class="section">
+      <div class="section-title">Comparison Charts</div>
+      <div class="comp-charts-grid">
+        <div class="chart-card">
+          <div class="chart-card-title">Efficiency Metrics</div>
+          <div class="chart-card-sub">CPM · CPV · CTR · CPC — comparison period vs selected period</div>
+          <div class="chart-wrap"><canvas id="compEfficiencyChart"></canvas></div>
+        </div>
+        <div class="chart-card">
+          <div class="chart-card-title">Performance Metrics</div>
+          <div class="chart-card-sub">Impressions · Reach · Views · Clicks · Engagement — period totals</div>
+          <div class="chart-wrap"><canvas id="compAudienceChart"></canvas></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="divider"></div>
+
+    <!-- Summary Metrics Table -->
+    <div class="section" style="padding-bottom:0;">
+      <div class="section-title">Metrics Summary</div>
+      <div class="table-wrapper">
+        <table class="comp-summary-table" id="compSummaryTable">
+          <thead>
+            <tr>
+              <th>Metric</th>
+              <th id="thPrev">Comparison Period</th>
+              <th id="thCurr">Selected Period</th>
+              <th>Absolute Change</th>
+              <th>% Change</th>
+            </tr>
+          </thead>
+          <tbody id="compSummaryBody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Ads Comparison Table -->
+    <div class="table-section" style="padding-top:32px;">
+      <div class="section-title">Ad-Level Comparison</div>
+      <div class="table-wrapper">
+        <table class="comp-ads-table" id="compAdsTable">
+          <thead>
+            <tr>
+              <th>Ad Name</th>
+              <th>Platform</th>
+              <th>Prev Spend</th>
+              <th>Curr Spend</th>
+              <th>Spend Δ</th>
+              <th>Prev Impr.</th>
+              <th>Curr Impr.</th>
+              <th>Prev CPM</th>
+              <th>Curr CPM</th>
+              <th>CPM Δ</th>
+              <th>Prev Views</th>
+              <th>Curr Views</th>
+              <th>Prev CPV</th>
+              <th>Curr CPV</th>
+              <th>Prev Eng.</th>
+              <th>Curr Eng.</th>
+              <th>Eng. Δ</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody id="compAdsBody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Executive Summary -->
+    <div class="ai-section" style="padding-top:32px;">
+      <div class="section-title">Executive Summary</div>
+      <div class="ai-card">
+        <div class="ai-header">
+          <div class="ai-header-left">
+            <div class="ai-logo">📋</div>
+            <div>
+              <h3>Performance Analysis</h3>
+              <p id="execSummaryLabel">Analyzing period data…</p>
+            </div>
+          </div>
+        </div>
+        <div class="ai-body">
+          <div class="ai-content" id="execSummaryContent">
+            <div class="ai-tabs">
+              <button class="ai-tab active" onclick="switchExecTab('overview',this)">📈 Overview</button>
+              <button class="ai-tab" onclick="switchExecTab('winners',this)">🏆 Winners & Losers</button>
+              <button class="ai-tab" onclick="switchExecTab('recs',this)">💡 Recommendations</button>
+            </div>
+            <div class="ai-panel active" id="epanel-overview"></div>
+            <div class="ai-panel" id="epanel-winners"></div>
+            <div class="ai-panel" id="epanel-recs"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- /compDashboard -->
+
+</div><!-- /tabComparison -->
+
+<!-- ── SAVED REPORT PICKER MODAL ──────────────── -->
+<div class="modal-overlay" id="savedPickerOverlay">
+  <div class="modal">
+    <h3>💾 Pick a Saved Report</h3>
+    <p id="savedPickerSub">Choose a previously saved file.</p>
+    <div class="saved-picker" id="savedPickerList">
+      <div class="saved-reports-empty">Loading…</div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost btn-sm" onclick="closeSavedPicker()">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ════════════════════════════════════════════════
+   STATE
+════════════════════════════════════════════════ */
+let adsData = [];
+let fileName = '';
+let charts = {};
+let insightsDate = '—';
+let lastFileBuffer = null;   // raw bytes of the currently loaded file (for "Save to Site")
+
+/* ════════════════════════════════════════════════
+   COLUMN MAPPING
+════════════════════════════════════════════════ */
+const COL_MAP = {
+  spend:       ['amount spent','cost','spend','total spend','ad spend','money spent'],
+  impressions: ['impressions','impression','impr','total impressions'],
+  reach:       ['reach','total reach','unique reach'],
+  views:       ['views','video views','total views','3-second video plays','thruplay','video view','play'],
+  clicks:      ['clicks','link clicks','total clicks','click','outbound clicks'],
+  engagement:  ['engagement','engagements','total engagement','post engagement','interactions'],
+  likes:       ['likes','reactions','post reactions','like'],
+  comments:    ['comments','comment'],
+  shares:      ['shares','share'],
+  saves:       ['saves','save','bookmarks'],
+  platform:    ['platform','channel','network','source','media'],
+  adName:      ['ad name','name','ad','campaign name','creative','content','title','campaign'],
+  link:        ['link','url','ad url','destination url','website url','landing page','permalink','post url'],
+  objective:   ['objective','campaign objective','goal','optimization goal','campaign goal'],
+  frequency:   ['frequency','freq'],
+  cpm:         ['cpm','cost per 1000 impressions','cost per mille','cost per thousand'],
+  cpv:         ['cpv','cost per view','cost per video view'],
+};
+
+function findCol(headers, key) {
+  const candidates = COL_MAP[key];
+  for (const h of headers) {
+    const norm = h.toLowerCase().trim();
+    for (const c of candidates) {
+      if (norm === c || norm.includes(c)) return h;
+    }
+  }
+  return null;
+}
+
+/* ════════════════════════════════════════════════
+   PLATFORM GUESSER
+════════════════════════════════════════════════ */
+const PLATFORM_RULES = [
+  { name: 'Facebook', keywords: ['facebook','fb meta','fb.com'], color: 'facebook' },
+  { name: 'Instagram', keywords: ['instagram','ig ','ig_','insta'], color: 'instagram' },
+  { name: 'TikTok', keywords: ['tiktok','tik tok','tt '], color: 'tiktok' },
+  { name: 'YouTube', keywords: ['youtube','yt '], color: 'youtube' },
+  { name: 'LinkedIn', keywords: ['linkedin','li '], color: 'linkedin' },
+  { name: 'Twitter', keywords: ['twitter','tweet'], color: 'twitter' },
+  { name: 'X', keywords: ['x.com',' x '], color: 'x' },
+  { name: 'Snapchat', keywords: ['snapchat','snap'], color: 'snapchat' },
+  { name: 'Google', keywords: ['google','gdn','search','display'], color: 'google' },
+];
+
+function guessPlatform(row) {
+  const haystack = Object.values(row).join(' ').toLowerCase();
+  for (const p of PLATFORM_RULES) {
+    for (const kw of p.keywords) {
+      if (haystack.includes(kw)) return { name: p.name, color: p.color };
+    }
+  }
+  return { name: 'Unknown', color: 'unknown' };
+}
+
+/* ════════════════════════════════════════════════
+   FILE HANDLING
+════════════════════════════════════════════════ */
+function handleFileInput(input) {
+  const file = input.files[0];
+  if (!file) return;
+  readFile(file);
+}
+
+function readFile(file) {
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    loadDashboardBuffer(e.target.result, file.name);
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+function loadDashboardBuffer(arrayBuffer, name) {
+  try {
+    const data = new Uint8Array(arrayBuffer);
+    const wb = XLSX.read(data, { type: 'array', cellDates: true });
+    const ws = wb.Sheets[wb.SheetNames[0]];
+    const json = XLSX.utils.sheet_to_json(ws, { defval: '' });
+    fileName = name;
+    lastFileBuffer = arrayBuffer;
+    processData(json);
+  } catch(err) {
+    showToast('❌ Failed to parse file: ' + err.message, 'error');
+  }
+}
+
+/* ════════════════════════════════════════════════
+   DATA PROCESSING
+════════════════════════════════════════════════ */
+function n(v) {
+  if (v === '' || v == null) return 0;
+  if (typeof v === 'number') return v;
+  return parseFloat(String(v).replace(/[^0-9.\-]/g, '')) || 0;
+}
+
+function processData(rows) {
+  if (!rows.length) { showToast('⚠️ The file appears to be empty.', 'error'); return; }
+
+  insightsDate = extractInsightsDate(rows);
+
+  const headers = Object.keys(rows[0]);
+  const cols = {};
+  for (const k of Object.keys(COL_MAP)) cols[k] = findCol(headers, k);
+
+  adsData = rows.map((row, i) => {
+    const spend       = n(cols.spend       ? row[cols.spend]       : 0);
+    const impressions = n(cols.impressions ? row[cols.impressions] : 0);
+    const reach       = n(cols.reach       ? row[cols.reach]       : 0);
+    const views       = n(cols.views       ? row[cols.views]       : 0);
+    const clicks      = n(cols.clicks      ? row[cols.clicks]      : 0);
+    const likes       = n(cols.likes       ? row[cols.likes]       : 0);
+    const comments    = n(cols.comments    ? row[cols.comments]    : 0);
+    const shares      = n(cols.shares      ? row[cols.shares]      : 0);
+    const saves       = n(cols.saves       ? row[cols.saves]       : 0);
+    const engagement  = cols.engagement
+      ? (n(row[cols.engagement]) || likes + comments + shares + saves)
+      : likes + comments + shares + saves;
+    const frequency   = n(cols.frequency   ? row[cols.frequency]   : 0);
+
+    const cpm = cols.cpm
+      ? (n(row[cols.cpm]) || (impressions ? (spend / impressions) * 1000 : 0))
+      : (impressions ? (spend / impressions) * 1000 : 0);
+    const cpv = cols.cpv
+      ? (n(row[cols.cpv]) || (views ? spend / views : 0))
+      : (views ? spend / views : 0);
+
+    let platform;
+    if (cols.platform && row[cols.platform]) {
+      const pv = String(row[cols.platform]).toLowerCase();
+      const match = PLATFORM_RULES.find(p => p.keywords.some(k => pv.includes(k)));
+      platform = match ? { name: match.name, color: match.color } : { name: String(row[cols.platform]), color: 'unknown' };
+    } else {
+      platform = guessPlatform(row);
+    }
+
+    const adName    = cols.adName    ? String(row[cols.adName] || `Ad ${i+1}`)    : `Ad ${i+1}`;
+    const link      = cols.link      ? String(row[cols.link]      || '')           : '';
+    const objective = cols.objective ? String(row[cols.objective] || '')           : '';
+
+    return { adName, platform, link, objective, spend, impressions, cpm, reach, frequency, views, cpv, clicks, engagement, likes, comments, shares, saves };
+  });
+
+  renderDashboard();
+}
+
+/* ════════════════════════════════════════════════
+   RENDER DASHBOARD
+════════════════════════════════════════════════ */
+function renderDashboard() {
+  document.getElementById('uploadSection').style.display = 'none';
+  document.getElementById('dashboard').style.display = 'block';
+
+  const totSpend       = adsData.reduce((s, r) => s + r.spend, 0);
+  const totImpressions = adsData.reduce((s, r) => s + r.impressions, 0);
+  const totReach       = adsData.reduce((s, r) => s + r.reach, 0);
+  const totViews       = adsData.reduce((s, r) => s + r.views, 0);
+  const totClicks      = adsData.reduce((s, r) => s + r.clicks, 0);
+  const totEngagement  = adsData.reduce((s, r) => s + r.engagement, 0);
+  const avgCpm = totImpressions ? (totSpend / totImpressions) * 1000 : 0;
+  const avgCpv = totViews      ? totSpend / totViews : 0;
+
+  document.getElementById('dashTitle').textContent = 'Advertising Dashboard';
+  document.getElementById('dashSub').textContent   = `${adsData.length} ads · ${new Date().toLocaleDateString()}`;
+  document.getElementById('fileNameBadge').textContent = fileName;
+
+  document.getElementById('kpiSpend').textContent       = fmt.currency(totSpend);
+  document.getElementById('kpiImpressions').textContent = fmt.number(totImpressions);
+  document.getElementById('kpiReach').textContent       = fmt.number(totReach);
+  document.getElementById('kpiViews').textContent       = fmt.number(totViews);
+  document.getElementById('kpiCpm').textContent         = fmt.currency(avgCpm);
+  document.getElementById('kpiCpv').textContent         = fmt.cpv(avgCpv);
+  document.getElementById('kpiClicks').textContent      = fmt.number(totClicks);
+  document.getElementById('kpiEngagement').textContent  = fmt.number(totEngagement);
+
+  renderMetaBar();
+
+  renderCharts();
+  renderTable();
+}
+
+/* ════════════════════════════════════════════════
+   META BAR
+════════════════════════════════════════════════ */
+const MONTH_NAMES = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+const MONTH_SHORT = ['jan','feb','mar','apr','may','jun','jul','aug','sep','oct','nov','dec'];
+
+function parseAnyDate(val) {
+  if (!val) return null;
+
+  // Real Date object (from cellDates: true)
+  if (val instanceof Date) {
+    const yr = val.getFullYear();
+    if (yr >= 2015 && yr <= 2035) return val;
+    return null;
+  }
+
+  const str = String(val).trim();
+  if (!str || str.length < 4) return null;
+
+  // Standard parse (ISO, RFC, etc.)
+  const d = new Date(str);
+  if (!isNaN(d.getTime())) {
+    const yr = d.getFullYear();
+    if (yr >= 2015 && yr <= 2035) return d;
+  }
+
+  // "January 2025", "January 15 2025", "Jan 2025", "jan-25"
+  for (let i = 0; i < MONTH_NAMES.length; i++) {
+    const full  = MONTH_NAMES[i].toLowerCase();
+    const short = MONTH_SHORT[i];
+    const sl = str.toLowerCase();
+    if (sl.includes(full) || sl.includes(short)) {
+      const yr = str.match(/20\d{2}/);
+      if (yr) return new Date(`${MONTH_NAMES[i]} 1, ${yr[0]}`);
+    }
+  }
+
+  // DD/MM/YYYY or MM/DD/YYYY
+  const dmyMatch = str.match(/^(\d{1,2})[\/\-\.](\d{1,2})[\/\-\.](20\d{2})$/);
+  if (dmyMatch) {
+    const yr = parseInt(dmyMatch[3]);
+    const a  = parseInt(dmyMatch[1]);
+    const b  = parseInt(dmyMatch[2]);
+    if (a >= 1 && a <= 12) return new Date(yr, a - 1, 1);
+    if (b >= 1 && b <= 12) return new Date(yr, b - 1, 1);
+  }
+
+  // YYYY/MM/DD
+  const ymdMatch = str.match(/^(20\d{2})[\/\-\.](\d{1,2})[\/\-\.]\d{1,2}$/);
+  if (ymdMatch) {
+    const mo = parseInt(ymdMatch[2]);
+    if (mo >= 1 && mo <= 12) return new Date(parseInt(ymdMatch[1]), mo - 1, 1);
+  }
+
+  return null;
+}
+
+function extractInsightsDate(rows) {
+  // 1. Filename first
+  const fn = fileName.toLowerCase();
+  for (let i = 0; i < MONTH_NAMES.length; i++) {
+    if (fn.includes(MONTH_NAMES[i].toLowerCase())) {
+      const yr = fn.match(/20\d{2}/);
+      if (yr) return MONTH_NAMES[i] + ' ' + yr[0];
+    }
+  }
+  for (let i = 0; i < MONTH_SHORT.length; i++) {
+    if (fn.includes(MONTH_SHORT[i])) {
+      const yr = fn.match(/20\d{2}/);
+      if (yr) return MONTH_NAMES[i] + ' ' + yr[0];
+    }
+  }
+  const ymFn = fn.match(/(20\d{2})[-_/.]?(0[1-9]|1[0-2])/) || fn.match(/(0[1-9]|1[0-2])[-_/.](20\d{2})/);
+  if (ymFn) {
+    const yearM = ymFn[0].match(/20\d{2}/);
+    const monM  = ymFn[0].match(/0[1-9]|1[0-2]/);
+    if (yearM && monM) return MONTH_NAMES[parseInt(monM[0]) - 1] + ' ' + yearM[0];
+  }
+
+  // 2. Scan every cell in every row
+  const counts = new Map();
+  for (const row of rows) {
+    for (const val of Object.values(row)) {
+      const d = parseAnyDate(val);
+      if (d) {
+        const key = MONTH_NAMES[d.getMonth()] + ' ' + d.getFullYear();
+        counts.set(key, (counts.get(key) || 0) + 1);
+      }
+    }
+  }
+
+  if (counts.size === 0) return '—';
+  // Most common month+year across all data cells
+  return [...counts.entries()].sort((a, b) => b[1] - a[1])[0][0];
+}
+
+function getUniquePlatforms() {
+  const seen = new Map();
+  for (const r of adsData) {
+    if (!seen.has(r.platform.name)) seen.set(r.platform.name, r.platform.color);
+  }
+  return [...seen.entries()];
+}
+
+function renderMetaBar() {
+  const today = new Date();
+  document.getElementById('metaReportDate').textContent =
+    today.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+
+  document.getElementById('metaInsightsDate').textContent = insightsDate;
+
+  const platforms = getUniquePlatforms();
+  const platformEl = document.getElementById('metaPlatform');
+  if (!platforms.length) { platformEl.textContent = '—'; return; }
+  platformEl.innerHTML = platforms.map(([name, color]) =>
+    `<span class="platform-pill platform-${color}" style="margin-right:4px;">${platformIcon(name)} ${name}</span>`
+  ).join('');
+}
+
+/* ════════════════════════════════════════════════
+   FORMAT HELPERS
+════════════════════════════════════════════════ */
+const fmt = {
+  // Full numbers for KPI cards (no shortcuts)
+  currency: (v) => '$' + v.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }),
+  number:   (v) => Math.round(v).toLocaleString('en-US'),
+  cpv:      (v) => '$' + v.toFixed(5),
+  // Short versions for chart axis labels only
+  short: (v) => {
+    if (v >= 1e9) return (v/1e9).toFixed(1) + 'B';
+    if (v >= 1e6) return (v/1e6).toFixed(1) + 'M';
+    if (v >= 1e3) return (v/1e3).toFixed(0) + 'K';
+    return Math.round(v).toLocaleString();
+  },
+  shortCurrency: (v) => {
+    if (v >= 1e6) return '$' + (v/1e6).toFixed(1) + 'M';
+    if (v >= 1e3) return '$' + (v/1e3).toFixed(0) + 'K';
+    return '$' + v.toFixed(2);
+  },
+  raw:  (v, digits=2) => v ? v.toFixed(digits) : '—',
+  rawN: (v) => v ? Math.round(v).toLocaleString('en-US') : '—',
+};
+
+/* ════════════════════════════════════════════════
+   CHARTS
+════════════════════════════════════════════════ */
+Chart.defaults.color = '#64748b';
+Chart.defaults.font.family = "'Segoe UI', system-ui, sans-serif";
+Chart.defaults.font.size = 12;
+
+const COLORS = [
+  '#3b82f6','#8b5cf6','#06b6d4','#10b981','#f59e0b','#ef4444',
+  '#ec4899','#14b8a6','#f97316','#6366f1','#84cc16','#a855f7',
+];
+
+function destroyChart(id) {
+  if (charts[id]) { charts[id].destroy(); delete charts[id]; }
+}
+
+function renderCharts() {
+  // Top 8 ads by spend
+  const sorted = [...adsData].sort((a,b) => b.spend - a.spend).slice(0, 8);
+  const labels = sorted.map(r => truncate(r.adName, 20));
+
+  // 1. Spend per Ad
+  destroyChart('spend');
+  charts.spend = new Chart(document.getElementById('spendChart'), {
+    type: 'bar',
+    data: {
+      labels,
+      datasets: [{
+        label: 'Spend ($)',
+        data: sorted.map(r => r.spend),
+        backgroundColor: COLORS.map(c => c + 'cc'),
+        borderColor: COLORS,
+        borderWidth: 1,
+        borderRadius: 4,
+      }]
+    },
+    options: chartOpts({ prefix: '$' }),
+  });
+
+  // 2. CPM vs CPV per Ad
+  destroyChart('cpmCpv');
+  charts.cpmCpv = new Chart(document.getElementById('cpmCpvChart'), {
+    type: 'bar',
+    data: {
+      labels,
+      datasets: [
+        { label: 'CPM ($)', data: sorted.map(r => +r.cpm.toFixed(2)), backgroundColor: '#3b82f6aa', borderColor: '#3b82f6', borderWidth: 1, borderRadius: 4 },
+        { label: 'CPV ($)', data: sorted.map(r => +r.cpv.toFixed(4)), backgroundColor: '#8b5cf6aa', borderColor: '#8b5cf6', borderWidth: 1, borderRadius: 4 },
+      ]
+    },
+    options: chartOpts({ prefix: '$' }),
+  });
+
+  // 3. Engagement Breakdown (doughnut)
+  destroyChart('engagement');
+  const totLikes    = adsData.reduce((s,r) => s+r.likes, 0);
+  const totComments = adsData.reduce((s,r) => s+r.comments, 0);
+  const totShares   = adsData.reduce((s,r) => s+r.shares, 0);
+  const totSaves    = adsData.reduce((s,r) => s+r.saves, 0);
+  charts.engagement = new Chart(document.getElementById('engagementChart'), {
+    type: 'doughnut',
+    data: {
+      labels: ['Likes', 'Comments', 'Shares', 'Saves'],
+      datasets: [{
+        data: [totLikes, totComments, totShares, totSaves],
+        backgroundColor: ['#3b82f6cc','#8b5cf6cc','#06b6d4cc','#10b981cc'],
+        borderColor: ['#3b82f6','#8b5cf6','#06b6d4','#10b981'],
+        borderWidth: 2,
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { position: 'bottom', labels: { padding: 16, color: '#94a3b8' } },
+        tooltip: {
+          callbacks: {
+            label: ctx => ` ${ctx.label}: ${fmt.short(ctx.raw)} (${((ctx.raw/(totLikes+totComments+totShares+totSaves))*100).toFixed(1)}%)`
+          }
+        }
+      }
+    }
+  });
+
+  // 4. Impressions vs Reach vs Views
+  destroyChart('audience');
+  charts.audience = new Chart(document.getElementById('audienceChart'), {
+    type: 'bar',
+    data: {
+      labels,
+      datasets: [
+        { label: 'Impressions', data: sorted.map(r => r.impressions), backgroundColor: '#3b82f6aa', borderColor: '#3b82f6', borderWidth: 1, borderRadius: 3 },
+        { label: 'Reach',       data: sorted.map(r => r.reach),       backgroundColor: '#8b5cf6aa', borderColor: '#8b5cf6', borderWidth: 1, borderRadius: 3 },
+        { label: 'Views',       data: sorted.map(r => r.views),       backgroundColor: '#10b981aa', borderColor: '#10b981', borderWidth: 1, borderRadius: 3 },
+      ]
+    },
+    options: chartOpts({}),
+  });
+}
+
+function chartOpts({ prefix = '' } = {}) {
+  return {
+    responsive: true,
+    maintainAspectRatio: false,
+    interaction: { mode: 'index', intersect: false },
+    plugins: {
+      legend: { position: 'bottom', labels: { padding: 14, color: '#94a3b8', boxWidth: 12, boxHeight: 12 } },
+      tooltip: {
+        backgroundColor: '#1a2235',
+        borderColor: '#1e3a5f',
+        borderWidth: 1,
+        titleColor: '#e2e8f0',
+        bodyColor: '#94a3b8',
+        callbacks: {
+          label: ctx => ` ${ctx.dataset.label}: ${prefix}${ctx.raw.toLocaleString()}`
+        }
+      }
+    },
+    scales: {
+      x: {
+        ticks: { color: '#64748b', maxRotation: 45, font: { size: 10 } },
+        grid: { color: 'rgba(30,58,95,0.4)' }
+      },
+      y: {
+        ticks: {
+          color: '#64748b',
+          callback: v => prefix ? fmt.shortCurrency(v) : fmt.short(v)
+        },
+        grid: { color: 'rgba(30,58,95,0.4)' }
+      }
+    }
+  };
+}
+
+function truncate(str, len) {
+  return str.length > len ? str.slice(0, len) + '…' : str;
+}
+
+/* ════════════════════════════════════════════════
+   TABLE
+════════════════════════════════════════════════ */
+function renderTable() {
+  const tbody = document.getElementById('adsTableBody');
+  if (!adsData.length) {
+    tbody.innerHTML = '<tr><td colspan="19" class="no-data">No data.</td></tr>';
+    return;
+  }
+
+  tbody.innerHTML = adsData.map((r, i) => `
+    <tr>
+      <td style="color:var(--muted)">${i+1}</td>
+      <td><span class="platform-badge platform-${r.platform.color}">${platformIcon(r.platform.name)} ${r.platform.name}</span></td>
+      <td style="max-width:200px;overflow:hidden;text-overflow:ellipsis;" title="${esc(r.adName)}">${esc(truncate(r.adName, 35))}</td>
+      <td class="preview-cell">${previewCell(r.link, r.adName)}</td>
+      <td>${r.link ? `<a href="${esc(r.link)}" target="_blank" rel="noopener">🔗 View</a>` : '<span style="color:var(--muted)">—</span>'}</td>
+      <td style="color:var(--subtle)">${esc(r.objective) || '—'}</td>
+      <td class="number-cell" style="color:var(--accent)">${r.spend ? '$'+r.spend.toFixed(2) : '—'}</td>
+      <td class="number-cell">${fmt.rawN(r.impressions)}</td>
+      <td class="number-cell" style="color:var(--yellow)">${r.cpm ? '$'+r.cpm.toFixed(2) : '—'}</td>
+      <td class="number-cell">${fmt.rawN(r.reach)}</td>
+      <td class="number-cell">${r.frequency ? r.frequency.toFixed(2) : '—'}</td>
+      <td class="number-cell">${fmt.rawN(r.views)}</td>
+      <td class="number-cell" style="color:var(--red)">${r.cpv ? '$'+r.cpv.toFixed(5) : '—'}</td>
+      <td class="number-cell">${fmt.rawN(r.clicks)}</td>
+      <td class="number-cell" style="color:var(--accent2)">${fmt.rawN(r.engagement)}</td>
+      <td class="number-cell">${fmt.rawN(r.likes)}</td>
+      <td class="number-cell">${fmt.rawN(r.comments)}</td>
+      <td class="number-cell">${fmt.rawN(r.shares)}</td>
+      <td class="number-cell">${fmt.rawN(r.saves)}</td>
+    </tr>
+  `).join('');
+}
+
+function platformIcon(name) {
+  const icons = { Facebook:'🔵', Instagram:'📸', TikTok:'🎵', YouTube:'▶️', LinkedIn:'💼', Twitter:'🐦', X:'✖️', Snapchat:'👻', Google:'🔍' };
+  return icons[name] || '📢';
+}
+
+function esc(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+/* ── PREVIEW HELPERS ── */
+function previewSrc(link) {
+  if (!link) return null;
+  const url = link.trim();
+
+  // YouTube
+  const yt = url.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/)([\w\-]{11})/);
+  if (yt) return `https://img.youtube.com/vi/${yt[1]}/mqdefault.jpg`;
+
+  // Direct image URL
+  if (/\.(jpg|jpeg|png|gif|webp|avif|svg)(\?|$)/i.test(url)) return url;
+
+  // Generic page screenshot via Microlink (free, no key needed)
+  return `https://api.microlink.io/?url=${encodeURIComponent(url)}&screenshot=true&meta=false&embed=screenshot.url`;
+}
+
+function previewCell(link, adName) {
+  const src = previewSrc(link);
+  if (!src) return `<div class="preview-empty">🖼️</div>`;
+
+  const safeSrc  = src.replace(/\\/g,'\\\\').replace(/'/g,"\\'");
+  const safeLink = (link||'').replace(/\\/g,'\\\\').replace(/'/g,"\\'");
+  const safeAlt  = (adName||'Preview').replace(/'/g,"\\'");
+
+  return `<img class="preview-thumb" src="${esc(src)}" alt="${esc(adName||'Preview')}" loading="lazy"
+    onerror="this.outerHTML='<div class=\\'preview-empty\\'>🖼️</div>'"
+    onclick="openPreview('${safeSrc}','${safeLink}','${safeAlt}')">`;
+}
+
+function openPreview(src, link, label) {
+  const overlay = document.createElement('div');
+  overlay.className = 'preview-overlay';
+  overlay.innerHTML = `
+    <div class="preview-lightbox">
+      <button class="preview-close" title="Close">✕</button>
+      <img src="${esc(src)}" alt="${esc(label)}"
+        onerror="this.outerHTML='<div style=\\'padding:40px;color:#64748b;font-size:14px;\\'>⚠️ Could not load preview</div>'">
+      <div class="preview-lightbox-footer">
+        <span class="preview-lightbox-label">${esc(label)}</span>
+        ${link ? `<a href="${esc(link)}" target="_blank" rel="noopener" class="btn btn-primary btn-sm">Open Link ↗</a>` : ''}
+      </div>
+    </div>`;
+  overlay.querySelector('.preview-close').onclick = () => overlay.remove();
+  overlay.addEventListener('click', e => { if (e.target === overlay) overlay.remove(); });
+  document.body.appendChild(overlay);
+}
+
+/* ════════════════════════════════════════════════
+   LOCAL ANALYSIS ENGINE
+════════════════════════════════════════════════ */
+function runAiAnalysis() {
+  if (!adsData.length) { showToast('⚠️ Please upload data first.', 'error'); return; }
+
+  document.getElementById('aiPlaceholder').style.display = 'none';
+  document.getElementById('aiContent').style.display = 'none';
+  document.getElementById('aiLoading').style.display = 'flex';
+
+  // Short delay for UX feel, then run synchronous analysis
+  setTimeout(() => {
+    const { analysis, notes, recommendations } = buildLocalAnalysis();
+    document.getElementById('panel-analysis').innerHTML = analysis;
+    document.getElementById('panel-notes').innerHTML = notes;
+    document.getElementById('panel-recommendations').innerHTML = recommendations;
+    document.getElementById('aiProviderLabel').textContent = `Smart analysis engine · ${adsData.length} ads analyzed`;
+    document.getElementById('aiLoading').style.display = 'none';
+    document.getElementById('aiContent').style.display = 'block';
+    showToast('✅ Analysis complete!', 'success');
+  }, 600);
+}
+
+function pct(v, total) { return total ? ((v / total) * 100).toFixed(1) + '%' : '—'; }
+function $$(v, d = 2) { return '$' + v.toFixed(d); }
+function nn(v) { return Math.round(v).toLocaleString('en-US'); }
+function adLabel(r) { return `<strong>${truncate(r.adName, 40)}</strong>`; }
+
+function buildLocalAnalysis() {
+  const totSpend       = adsData.reduce((s, r) => s + r.spend, 0);
+  const totImpressions = adsData.reduce((s, r) => s + r.impressions, 0);
+  const totReach       = adsData.reduce((s, r) => s + r.reach, 0);
+  const totViews       = adsData.reduce((s, r) => s + r.views, 0);
+  const totClicks      = adsData.reduce((s, r) => s + r.clicks, 0);
+  const totEngagement  = adsData.reduce((s, r) => s + r.engagement, 0);
+  const totLikes       = adsData.reduce((s, r) => s + r.likes, 0);
+  const totComments    = adsData.reduce((s, r) => s + r.comments, 0);
+  const totShares      = adsData.reduce((s, r) => s + r.shares, 0);
+  const totSaves       = adsData.reduce((s, r) => s + r.saves, 0);
+  const avgCpm = totImpressions ? (totSpend / totImpressions) * 1000 : 0;
+  const avgCpv = totViews       ? totSpend / totViews : 0;
+
+  // Enrich each ad with derived metrics
+  const E = adsData.map(r => ({
+    ...r,
+    ctr:     r.impressions ? (r.clicks / r.impressions) * 100 : 0,
+    engRate: r.impressions ? (r.engagement / r.impressions) * 100 : 0,
+    viewRate:r.impressions ? (r.views / r.impressions) * 100 : 0,
+    spendPct:totSpend      ? (r.spend / totSpend) * 100 : 0,
+  }));
+
+  const bySpend   = [...E].sort((a, b) => b.spend - a.spend);
+  const byCpm     = [...E].filter(r => r.cpm > 0).sort((a, b) => a.cpm - b.cpm);
+  const byCpv     = [...E].filter(r => r.cpv > 0).sort((a, b) => a.cpv - b.cpv);
+  const byEngRate = [...E].sort((a, b) => b.engRate - a.engRate);
+  const byCtr     = [...E].sort((a, b) => b.ctr - a.ctr);
+  const byViews   = [...E].sort((a, b) => b.views - a.views);
+
+  // Platform summary
+  const platMap = new Map();
+  for (const r of E) {
+    const p = r.platform.name;
+    if (!platMap.has(p)) platMap.set(p, { spend: 0, impressions: 0, clicks: 0, engagement: 0, views: 0, count: 0 });
+    const m = platMap.get(p);
+    m.spend += r.spend; m.impressions += r.impressions; m.clicks += r.clicks;
+    m.engagement += r.engagement; m.views += r.views; m.count++;
+  }
+  const platforms = [...platMap.entries()].sort((a, b) => b[1].spend - a[1].spend);
+
+  /* ── ANALYSIS ── */
+  let analysis = `
+    <h4>Campaign Overview</h4>
+    <p>This campaign ran <strong>${adsData.length} ad${adsData.length > 1 ? 's' : ''}</strong> with a total spend of <strong>${$$(totSpend)}</strong>,
+    generating <strong>${nn(totImpressions)}</strong> impressions across <strong>${nn(totReach)}</strong> unique accounts.
+    The overall average CPM was <strong>${$$(avgCpm)}</strong>${totViews > 0 ? ` and average CPV was <strong>${$$(avgCpv, 5)}</strong>` : ''}.
+    Total engagement reached <strong>${nn(totEngagement)}</strong> interactions
+    (${nn(totLikes)} likes · ${nn(totComments)} comments · ${nn(totShares)} shares · ${nn(totSaves)} saves).</p>`;
+
+  // Platform breakdown
+  if (platforms.length > 1) {
+    analysis += `<h4>Platform Breakdown</h4><ul>`;
+    for (const [name, m] of platforms) {
+      const platCpm = m.impressions ? (m.spend / m.impressions) * 1000 : 0;
+      const platCtr = m.impressions ? (m.clicks / m.impressions) * 100 : 0;
+      analysis += `<li><strong>${name}</strong> — ${m.count} ad${m.count > 1 ? 's' : ''} · Spend: ${$$(m.spend)} (${pct(m.spend, totSpend)}) ·
+        Impressions: ${nn(m.impressions)} · CPM: ${$$(platCpm)} · CTR: ${platCtr.toFixed(2)}%</li>`;
+    }
+    analysis += `</ul>`;
+  }
+
+  // Top 3 by spend
+  analysis += `<h4>Top Ads by Spend</h4><ul>`;
+  bySpend.slice(0, 3).forEach((r, i) => {
+    analysis += `<li>${i + 1}. ${adLabel(r)} — <strong>${$$(r.spend)}</strong> (${r.spendPct.toFixed(1)}% of budget) ·
+      CPM: ${$$(r.cpm)} · ${r.cpv > 0 ? 'CPV: ' + $$(r.cpv, 5) + ' · ' : ''}CTR: ${r.ctr.toFixed(2)}%</li>`;
+  });
+  analysis += `</ul>`;
+
+  // Best engagement rates
+  const topEng = byEngRate.filter(r => r.engRate > 0).slice(0, 3);
+  if (topEng.length) {
+    analysis += `<h4>Best Engagement Rates</h4><ul>`;
+    topEng.forEach((r, i) => {
+      analysis += `<li>${i + 1}. ${adLabel(r)} — <strong>${r.engRate.toFixed(2)}%</strong> engagement rate ·
+        ${nn(r.engagement)} total interactions</li>`;
+    });
+    analysis += `</ul>`;
+  }
+
+  // Best CPM
+  if (byCpm.length) {
+    analysis += `<h4>Most Efficient CPM</h4><ul>`;
+    byCpm.slice(0, 3).forEach((r, i) => {
+      analysis += `<li>${i + 1}. ${adLabel(r)} — CPM: <strong>${$$(r.cpm)}</strong> · ${nn(r.impressions)} impressions</li>`;
+    });
+    analysis += `</ul>`;
+  }
+
+  // Best CPV (only if views exist)
+  if (byCpv.length) {
+    analysis += `<h4>Most Efficient CPV</h4><ul>`;
+    byCpv.slice(0, 3).forEach((r, i) => {
+      analysis += `<li>${i + 1}. ${adLabel(r)} — CPV: <strong>${$$(r.cpv, 5)}</strong> · ${nn(r.views)} views · View rate: ${r.viewRate.toFixed(1)}%</li>`;
+    });
+    analysis += `</ul>`;
+  }
+
+  // Underperformers (highest CPM, lowest engagement)
+  const worstCpm = [...byCpm].reverse().slice(0, 2);
+  if (worstCpm.length) {
+    analysis += `<h4>Ads with Highest CPM (Review Needed)</h4><ul>`;
+    worstCpm.forEach(r => {
+      analysis += `<li>${adLabel(r)} — CPM: <strong>${$$(r.cpm)}</strong> · ${nn(r.impressions)} impressions ·
+        Spend: ${$$(r.spend)}</li>`;
+    });
+    analysis += `</ul>`;
+  }
+
+  /* ── NOTES ── */
+  let notes = `<h4>Key Performance Metrics</h4>`;
+  notes += `<ul>
+    <li>Total spend: <strong>${$$(totSpend)}</strong> across ${adsData.length} ads</li>
+    <li>Average spend per ad: <strong>${$$(totSpend / adsData.length)}</strong></li>
+    <li>Overall CTR: <strong>${totImpressions ? ((totClicks / totImpressions) * 100).toFixed(2) + '%' : '—'}</strong></li>
+    <li>Overall engagement rate: <strong>${totImpressions ? ((totEngagement / totImpressions) * 100).toFixed(2) + '%' : '—'}</strong></li>
+    ${totViews > 0 ? `<li>Overall view rate: <strong>${((totViews / totImpressions) * 100).toFixed(1)}%</strong></li>` : ''}
+    <li>Reach-to-impressions ratio: <strong>${totImpressions ? ((totReach / totImpressions) * 100).toFixed(1) + '%' : '—'}</strong>
+      ${totImpressions && totReach ? '(avg frequency ~' + (totImpressions / totReach).toFixed(2) + 'x)' : ''}</li>
+  </ul>`;
+
+  // Spend concentration
+  const top1SpendPct = bySpend[0] ? (bySpend[0].spend / totSpend) * 100 : 0;
+  if (top1SpendPct > 40) {
+    notes += `<div class="highlight-box">⚠️ <strong>Spend concentration:</strong> The top ad — ${adLabel(bySpend[0])} — accounts for
+      <strong>${top1SpendPct.toFixed(1)}%</strong> of total budget. Consider diversifying.</div>`;
+  }
+
+  // High frequency warning
+  const highFreqAds = E.filter(r => r.frequency > 3 && r.impressions > 0);
+  if (highFreqAds.length) {
+    notes += `<div class="highlight-box">⚠️ <strong>High frequency detected:</strong> ${highFreqAds.length} ad${highFreqAds.length > 1 ? 's' : ''}
+      showing frequency above 3.0 — audience fatigue may be reducing effectiveness.</div>`;
+  }
+
+  // Zero engagement ads
+  const zeroEngAds = E.filter(r => r.spend > 0 && r.engagement === 0);
+  if (zeroEngAds.length) {
+    notes += `<div class="highlight-box">⚠️ <strong>${zeroEngAds.length} ad${zeroEngAds.length > 1 ? 's' : ''} with zero engagement</strong> despite spend.
+      Review targeting and creative for: ${zeroEngAds.slice(0, 2).map(r => adLabel(r)).join(', ')}.</div>`;
+  }
+
+  // Engagement breakdown
+  const totalEngCheck = totLikes + totComments + totShares + totSaves;
+  if (totalEngCheck > 0) {
+    notes += `<h4>Engagement Composition</h4><ul>
+      <li>Likes: <strong>${nn(totLikes)}</strong> (${pct(totLikes, totalEngCheck)})</li>
+      <li>Comments: <strong>${nn(totComments)}</strong> (${pct(totComments, totalEngCheck)})</li>
+      <li>Shares: <strong>${nn(totShares)}</strong> (${pct(totShares, totalEngCheck)})</li>
+      <li>Saves: <strong>${nn(totSaves)}</strong> (${pct(totSaves, totalEngCheck)})</li>
+    </ul>`;
+    if (totShares / totalEngCheck > 0.15)
+      notes += `<p>✅ Strong share rate indicates highly shareable content.</p>`;
+    if (totComments / totalEngCheck > 0.10)
+      notes += `<p>✅ Above-average comment rate suggests the content is driving conversations.</p>`;
+    if (totSaves / totalEngCheck > 0.10)
+      notes += `<p>✅ High save rate indicates strong intent and valuable content.</p>`;
+  }
+
+  // CPM vs average
+  const highCpmAds = E.filter(r => r.cpm > avgCpm * 1.5 && r.impressions > 0);
+  const lowCpmAds  = E.filter(r => r.cpm < avgCpm * 0.6 && r.impressions > 0 && r.cpm > 0);
+  if (highCpmAds.length)
+    notes += `<p>⚠️ <strong>${highCpmAds.length} ad${highCpmAds.length > 1 ? 's' : ''}</strong> have CPM more than 50% above average (${$$(avgCpm)}) — consider pausing or refreshing creatives.</p>`;
+  if (lowCpmAds.length)
+    notes += `<p>✅ <strong>${lowCpmAds.length} ad${lowCpmAds.length > 1 ? 's' : ''}</strong> achieving CPM more than 40% below average — strong reach efficiency.</p>`;
+
+  /* ── RECOMMENDATIONS ── */
+  let recs = `<h4>Strategic Recommendations</h4><ol>`;
+  let recCount = 0;
+
+  // Scale top performers
+  const topPerformers = byEngRate.filter(r => r.engRate > 0 && r.spend > 0).slice(0, 2);
+  if (topPerformers.length) {
+    recs += `<li><strong>Scale top-performing ads.</strong> ${topPerformers.map(r => adLabel(r)).join(' and ')}
+      show the highest engagement rates. Increase their budget allocation to maximize returns.</li>`;
+    recCount++;
+  }
+
+  // Pause worst CPM
+  if (worstCpm.length && worstCpm[0].cpm > avgCpm * 1.5) {
+    recs += `<li><strong>Review high-CPM ads.</strong> ${adLabel(worstCpm[0])} has a CPM of <strong>${$$(worstCpm[0].cpm)}</strong> —
+      ${(worstCpm[0].cpm / avgCpm).toFixed(1)}x the campaign average. Consider pausing, refreshing the creative, or narrowing the audience targeting.</li>`;
+    recCount++;
+  }
+
+  // Budget reallocation
+  if (top1SpendPct > 40 && bySpend.length > 1) {
+    recs += `<li><strong>Diversify budget allocation.</strong> Currently ${top1SpendPct.toFixed(0)}% of spend goes to a single ad.
+      Redistribute some budget to the top 2–3 engagement performers to reduce concentration risk.</li>`;
+    recCount++;
+  }
+
+  // Frequency recommendation
+  if (highFreqAds.length) {
+    recs += `<li><strong>Address audience fatigue.</strong> ${highFreqAds.length} ad${highFreqAds.length > 1 ? 's are' : ' is'} showing
+      frequency above 3.0x. Refresh the creative, expand targeting audiences, or apply frequency caps.</li>`;
+    recCount++;
+  }
+
+  // Video/views recommendation
+  if (totViews > 0 && avgCpv > 0) {
+    const bestCpvAd = byCpv[0];
+    recs += `<li><strong>Optimize video strategy.</strong> The most efficient video ad is ${adLabel(bestCpvAd)} at
+      CPV <strong>${$$(bestCpvAd.cpv, 5)}</strong>.
+      ${bestCpvAd.viewRate < 20 ? 'The low view rate suggests improving the first 3 seconds of the video to reduce drop-off.' :
+        'Strong view rate — consider increasing its budget or replicating its format in new creatives.'}</li>`;
+    recCount++;
+  }
+
+  // CTR improvement
+  const avgCtr = totImpressions ? (totClicks / totImpressions) * 100 : 0;
+  if (avgCtr < 1) {
+    recs += `<li><strong>Improve click-through rate.</strong> The overall CTR of <strong>${avgCtr.toFixed(2)}%</strong> is below the typical 1–2% benchmark.
+      Test stronger CTAs, more targeted copy, and audience refinement to drive more clicks.</li>`;
+    recCount++;
+  }
+
+  // Engagement recommendation
+  if (totComments / Math.max(totalEngCheck, 1) < 0.05 && totalEngCheck > 0) {
+    recs += `<li><strong>Drive more comments.</strong> Comment rate is low at ${pct(totComments, totalEngCheck)}.
+      Try including questions, polls, or opinion-based content to encourage dialogue and boost organic reach.</li>`;
+    recCount++;
+  }
+
+  // Shares recommendation
+  if (totShares / Math.max(totalEngCheck, 1) < 0.05 && totalEngCheck > 0) {
+    recs += `<li><strong>Create more shareable content.</strong> Share rate is at ${pct(totShares, totalEngCheck)}.
+      Educational, entertaining, or emotionally resonant content tends to generate more shares and extend organic reach.</li>`;
+    recCount++;
+  }
+
+  // Zero engagement ads
+  if (zeroEngAds.length) {
+    recs += `<li><strong>Pause zero-engagement ads.</strong> ${zeroEngAds.length} ad${zeroEngAds.length > 1 ? 's' : ''}
+      spent budget without any engagement. Pause these immediately and investigate targeting, creative, and placements before relaunching.</li>`;
+    recCount++;
+  }
+
+  // Platform split
+  if (platforms.length === 1) {
+    recs += `<li><strong>Diversify platforms.</strong> All ads are currently on <strong>${platforms[0][0]}</strong>.
+      Testing additional platforms can reduce dependency, discover new audiences, and potentially improve cost efficiency.</li>`;
+    recCount++;
+  }
+
+  recs += `</ol>`;
+
+  return { analysis, notes, recommendations: recs };
+}
+
+function switchAiTab(name, btn) {
+  document.querySelectorAll('.ai-tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.ai-panel').forEach(p => p.classList.remove('active'));
+  btn.classList.add('active');
+  document.getElementById('panel-' + name).classList.add('active');
+}
+
+/* ════════════════════════════════════════════════
+   EXPORT
+════════════════════════════════════════════════ */
+function toggleExportMenu(e) {
+  e.stopPropagation();
+  document.getElementById('exportMenu').classList.toggle('open');
+}
+document.addEventListener('click', () => {
+  document.getElementById('exportMenu')?.classList.remove('open');
+});
+
+/* ── PDF ── */
+async function exportPDF() {
+  document.getElementById('exportMenu').classList.remove('open');
+  if (!adsData.length) { showToast('⚠️ No data to export.', 'error'); return; }
+  showToast('⏳ Generating PDF…');
+
+  try {
+    const { jsPDF } = window.jspdf;
+
+    // Reveal all AI panels temporarily for capture
+    const aiContent     = document.getElementById('aiContent');
+    const aiPlaceholder = document.getElementById('aiPlaceholder');
+    const aiLoading     = document.getElementById('aiLoading');
+    const hadAnalysis   = aiContent.style.display !== 'none' && aiContent.style.display !== '';
+    if (!hadAnalysis) {
+      aiPlaceholder.style.display = 'none';
+      aiLoading.style.display     = 'none';
+      aiContent.style.display     = 'block';
+    }
+    document.querySelectorAll('.ai-panel').forEach(p => p.style.display = 'block');
+
+    // Hide UI chrome that shouldn't appear in the PDF
+    const hideEls = [
+      document.querySelector('.navbar'),
+      document.querySelector('.dashboard-header'),
+      document.querySelector('.ai-header'),
+      document.querySelector('.ai-tabs'),
+    ];
+    hideEls.forEach(el => el && (el.dataset.pdfHide = el.style.display, el.style.display = 'none'));
+
+    // Expand the table wrapper so full width is captured
+    const tableWrapper = document.querySelector('.table-wrapper');
+    const origOverflow = tableWrapper.style.overflow;
+    tableWrapper.style.overflow = 'visible';
+
+    await new Promise(r => setTimeout(r, 80)); // let DOM settle
+
+    const dash = document.getElementById('dashboard');
+    const canvas = await html2canvas(dash, {
+      scale: 2,
+      useCORS: true,
+      allowTaint: true,
+      backgroundColor: '#0b0f1a',
+      logging: false,
+      scrollX: 0,
+      scrollY: 0,
+      width: dash.scrollWidth,
+      windowWidth: dash.scrollWidth,
+    });
+
+    // Restore hidden elements
+    hideEls.forEach(el => el && (el.style.display = el.dataset.pdfHide ?? ''));
+    tableWrapper.style.overflow = origOverflow;
+    if (!hadAnalysis) {
+      aiContent.style.display     = 'none';
+      aiPlaceholder.style.display = 'flex';
+      document.querySelectorAll('.ai-panel').forEach((p, i) => {
+        p.style.display = i === 0 ? 'block' : 'none';
+      });
+    }
+
+    // Paginate the canvas into A4 landscape pages
+    const pdf = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
+    const PW = 297, PH = 210, M = 8;
+    const contentW = PW - 2 * M;
+    const contentH = PH - 2 * M;
+    const mmPerPx   = contentW / canvas.width;
+    const pageHpx   = Math.floor(contentH / mmPerPx);
+
+    let yOffset = 0, page = 0;
+    while (yOffset < canvas.height) {
+      if (page > 0) pdf.addPage();
+      // Dark background
+      pdf.setFillColor(11, 15, 26);
+      pdf.rect(0, 0, PW, PH, 'F');
+
+      const sliceH = Math.min(pageHpx, canvas.height - yOffset);
+      const slice  = document.createElement('canvas');
+      slice.width  = canvas.width;
+      slice.height = sliceH;
+      slice.getContext('2d').drawImage(canvas, 0, -yOffset);
+
+      const imgH = sliceH * mmPerPx;
+      pdf.addImage(slice.toDataURL('image/jpeg', 0.92), 'JPEG', M, M, contentW, imgH);
+
+      yOffset += pageHpx;
+      page++;
+    }
+
+    // Cover page prepended at start
+    pdf.insertPage(1);
+    pdf.setFillColor(11, 15, 26);
+    pdf.rect(0, 0, PW, PH, 'F');
+    pdf.setFillColor(59, 130, 246);
+    pdf.rect(0, 0, 2.5, PH, 'F');
+    pdf.setFillColor(30, 58, 95);
+    pdf.rect(0, PH - 12, PW, 12, 'F');
+    pdf.setFont('helvetica', 'bold');
+    pdf.setFontSize(32); pdf.setTextColor(226, 232, 240);
+    pdf.text('Advertising', 14, 75);
+    pdf.text('Analytics Report', 14, 90);
+    pdf.setFont('helvetica', 'normal');
+    pdf.setFontSize(13); pdf.setTextColor(59, 130, 246);
+    pdf.text('Ad Performance Dashboard', 14, 105);
+    pdf.setFontSize(9); pdf.setTextColor(100, 116, 139);
+    const metaLines = [
+      ['Reporting Date',       new Date().toLocaleDateString('en-US', { year:'numeric', month:'long', day:'numeric' })],
+      ['Advertising Period',   insightsDate],
+      ['Platform(s)',          getUniquePlatforms().map(([n]) => n).join(', ') || '—'],
+      ['Total Ads',            String(adsData.length)],
+    ];
+    metaLines.forEach(([k, v], i) => {
+      pdf.setTextColor(100, 116, 139); pdf.text(k, 14, 122 + i * 9);
+      pdf.setTextColor(226, 232, 240); pdf.text(v, 70, 122 + i * 9);
+    });
+
+    const baseName = fileName.replace(/\.[^.]+$/, '') || 'AdAnalytics';
+    pdf.save(`${baseName}_Report.pdf`);
+    showToast('✅ PDF downloaded!', 'success');
+  } catch (err) {
+    showToast('❌ PDF error: ' + err.message, 'error');
+    console.error(err);
+  }
+}
+
+/* ── PPT ── */
+async function exportPPT() {
+  document.getElementById('exportMenu').classList.remove('open');
+  if (!adsData.length) { showToast('⚠️ No data to export.', 'error'); return; }
+  showToast('⏳ Building PowerPoint…');
+
+  const pres = new PptxGenJS();
+  pres.layout = 'LAYOUT_WIDE'; // 13.33 × 7.5 in
+
+  // ── Palette (exact dashboard colors) ──
+  const DARK  = '0b0f1a';
+  const SURF  = '111827';
+  const CARD  = '1a2235';
+  const BORD  = '1e3a5f';
+  const BLUE  = '3b82f6';
+  const PURP  = '8b5cf6';
+  const CYAN  = '06b6d4';
+  const GREEN = '10b981';
+  const YELL  = 'f59e0b';
+  const RED   = 'ef4444';
+  const TEXT  = 'e2e8f0';
+  const SUBT  = '94a3b8';
+  const MUTED = '64748b';
+
+  const today    = new Date().toLocaleDateString('en-US', { year:'numeric', month:'long', day:'numeric' });
+  const period   = insightsDate;
+  const platList = getUniquePlatforms().map(([n]) => n).join(' · ') || '—';
+
+  const totSpend       = adsData.reduce((s, r) => s + r.spend, 0);
+  const totImpressions = adsData.reduce((s, r) => s + r.impressions, 0);
+  const totReach       = adsData.reduce((s, r) => s + r.reach, 0);
+  const totViews       = adsData.reduce((s, r) => s + r.views, 0);
+  const totClicks      = adsData.reduce((s, r) => s + r.clicks, 0);
+  const totEngagement  = adsData.reduce((s, r) => s + r.engagement, 0);
+  const totLikes       = adsData.reduce((s, r) => s + r.likes, 0);
+  const totComments    = adsData.reduce((s, r) => s + r.comments, 0);
+  const totShares      = adsData.reduce((s, r) => s + r.shares, 0);
+  const totSaves       = adsData.reduce((s, r) => s + r.saves, 0);
+  const avgCpm = totImpressions ? (totSpend / totImpressions) * 1000 : 0;
+  const avgCpv = totViews       ? totSpend / totViews : 0;
+  const top8   = [...adsData].sort((a, b) => b.spend - a.spend).slice(0, 8);
+
+  // ── Helpers ──
+  const T  = (text, opts)      => ({ text, options: opts });
+  const SF = { fontFace: 'Segoe UI' };
+
+  function bg(slide) {
+    slide.addShape(pres.ShapeType.rect, { x:0, y:0, w:'100%', h:'100%', fill:{ color:DARK } });
+    // Subtle footer line
+    slide.addShape(pres.ShapeType.rect, { x:0, y:7.35, w:'100%', h:0.04, fill:{ color:BORD } });
+    slide.addText(today, { x:0.3, y:7.36, w:6, h:0.12, fontSize:6, color:MUTED, ...SF });
+    slide.addText('Ad Analytics Dashboard', { x:7, y:7.36, w:6.15, h:0.12, fontSize:6, color:MUTED, align:'right', ...SF });
+  }
+
+  function header(slide, title, sub='') {
+    // Header bg
+    slide.addShape(pres.ShapeType.rect, { x:0, y:0, w:'100%', h:0.72, fill:{ color:SURF } });
+    // Left accent bar (matches navbar brand gradient)
+    slide.addShape(pres.ShapeType.rect, { x:0, y:0, w:0.055, h:0.72, fill:{ color:BLUE } });
+    // Bottom border
+    slide.addShape(pres.ShapeType.rect, { x:0, y:0.70, w:'100%', h:0.022, fill:{ color:BORD } });
+    // Logo box (gradient blue→purple)
+    slide.addShape(pres.ShapeType.roundRect, {
+      x:0.14, y:0.11, w:0.5, h:0.5,
+      fill:{ type:'grad', stops:[{position:0,color:BLUE},{position:100,color:PURP}] },
+      line:{ type:'none' }, rectRadius:0.09,
+    });
+    slide.addText('📊', { x:0.14, y:0.11, w:0.5, h:0.5, align:'center', valign:'middle', fontSize:16 });
+    // Title + sub
+    slide.addText(title, { x:0.75, y:0.1,  w:9.8, h:0.3, fontSize:14, bold:true, color:TEXT, ...SF });
+    if (sub) slide.addText(sub, { x:0.75, y:0.42, w:9.8, h:0.22, fontSize:8.5, color:MUTED, ...SF });
+    // Date (right)
+    slide.addText(today, { x:10.1, y:0.25, w:3.1, h:0.22, fontSize:8, color:MUTED, align:'right', ...SF });
+  }
+
+  function kpiCard(slide, x, y, w, h, label, value, color, sub='') {
+    // Card
+    slide.addShape(pres.ShapeType.roundRect, {
+      x, y, w, h,
+      fill:{ color:CARD }, line:{ color:BORD, pt:0.8 }, rectRadius:0.12,
+      shadow:{ type:'outer', color:'000000', blur:8, offset:3, angle:270, opacity:0.35 },
+    });
+    // Colored top stripe
+    slide.addShape(pres.ShapeType.roundRect, {
+      x:x+0.05, y, w:w-0.1, h:0.06,
+      fill:{ color }, line:{ type:'none' }, rectRadius:0.06,
+    });
+    // Label
+    slide.addText(label.toUpperCase(), {
+      x:x+0.18, y:y+0.1, w:w-0.36, h:0.2,
+      fontSize:6.5, bold:true, color:MUTED, charSpacing:0.9, ...SF,
+    });
+    // Value
+    slide.addText(value, {
+      x:x+0.18, y:y+0.31, w:w-0.36, h:0.5,
+      fontSize:17, bold:true, color, ...SF,
+    });
+    // Sub label
+    if (sub) slide.addText(sub, {
+      x:x+0.18, y:y+0.78, w:w-0.36, h:0.16,
+      fontSize:6.5, color:MUTED, ...SF,
+    });
+  }
+
+  function chartCard(slide, x, y, w, h, title, sub) {
+    // Outer card
+    slide.addShape(pres.ShapeType.roundRect, {
+      x, y, w, h, fill:{ color:CARD }, line:{ color:BORD, pt:0.8 }, rectRadius:0.14,
+    });
+    // Title area bg (dark surface)
+    slide.addShape(pres.ShapeType.roundRect, {
+      x, y, w, h:0.55, fill:{ color:SURF }, line:{ type:'none' }, rectRadius:0.14,
+    });
+    // Square off top-rounded bottom corners of title area
+    slide.addShape(pres.ShapeType.rect, {
+      x, y:y+0.35, w, h:0.2, fill:{ color:SURF }, line:{ type:'none' },
+    });
+    // Title divider
+    slide.addShape(pres.ShapeType.rect, {
+      x, y:y+0.54, w, h:0.015, fill:{ color:BORD }, line:{ type:'none' },
+    });
+    slide.addText(title, { x:x+0.2, y:y+0.09, w:w-0.4, h:0.24, fontSize:10.5, bold:true, color:TEXT, ...SF });
+    if (sub) slide.addText(sub, { x:x+0.2, y:y+0.34, w:w-0.4, h:0.18, fontSize:7.5, color:MUTED, ...SF });
+  }
+
+  const CHART_OPT = (colors, extra={}) => ({
+    chartColors: colors,
+    valAxisLabelColor: MUTED, catAxisLabelColor: MUTED,
+    valAxisLabelFontSize: 8, catAxisLabelFontSize: 8,
+    valGridLine: { style:'solid', color:BORD, pt:0.5 },
+    catGridLine: { style:'none' },
+    plotAreaBorderColor: DARK,
+    chartAreaFillColor: CARD,
+    plotAreaFillColor:  CARD,
+    legendFontColor: SUBT, legendFontSize: 8,
+    dataLabelColor: TEXT, dataLabelFontSize: 7.5,
+    ...extra,
+  });
+
+  // ════════════════════════════════
+  // SLIDE 1 — Cover
+  // ════════════════════════════════
+  const s1 = pres.addSlide();
+  // Split background: dark left panel + slightly lighter right panel
+  s1.addShape(pres.ShapeType.rect, { x:0, y:0, w:5.5, h:'100%', fill:{ color:DARK } });
+  s1.addShape(pres.ShapeType.rect, { x:5.5, y:0, w:7.83, h:'100%', fill:{ color:SURF } });
+  // Blue vertical accent
+  s1.addShape(pres.ShapeType.rect, { x:0, y:0, w:0.07, h:'100%', fill:{ color:BLUE } });
+  // Gradient diagonal decoration
+  s1.addShape(pres.ShapeType.rect, { x:5.48, y:0, w:0.04, h:'100%', fill:{ color:BORD } });
+  // Logo box
+  s1.addShape(pres.ShapeType.roundRect, {
+    x:0.35, y:0.4, w:0.75, h:0.75,
+    fill:{ type:'grad', stops:[{position:0,color:BLUE},{position:100,color:PURP}] },
+    line:{ type:'none' }, rectRadius:0.15,
+  });
+  s1.addText('📊', { x:0.35, y:0.4, w:0.75, h:0.75, align:'center', valign:'middle', fontSize:26 });
+  s1.addText('AdAnalytics', { x:1.25, y:0.48, w:3.8, h:0.35, fontSize:16, bold:true, color:TEXT, ...SF });
+  s1.addText('Dashboard', { x:1.25, y:0.78, w:3.8, h:0.3, fontSize:12, color:BLUE, ...SF });
+  // Main title
+  s1.addText('Advertising\nAnalytics\nReport', {
+    x:0.35, y:1.55, w:4.8, h:2.8,
+    fontSize:38, bold:true, color:TEXT, ...SF, lineSpacingMultiple:1.15,
+  });
+  // Subtitle
+  s1.addText('Ad Performance Dashboard', {
+    x:0.35, y:4.35, w:4.8, h:0.45, fontSize:14, color:BLUE, ...SF,
+  });
+  // Divider
+  s1.addShape(pres.ShapeType.rect, { x:0.35, y:4.9, w:3.5, h:0.04, fill:{ color:BORD } });
+  // Meta info table (right panel)
+  s1.addText('Campaign Details', {
+    x:5.85, y:0.6, w:7.1, h:0.4, fontSize:18, bold:true, color:TEXT, ...SF,
+  });
+  s1.addShape(pres.ShapeType.rect, { x:5.85, y:1.05, w:7.1, h:0.03, fill:{ color:BORD } });
+  const meta = [
+    ['📅  Reporting Date',       today,          TEXT],
+    ['📊  Advertising Period',   period,         BLUE],
+    ['📢  Platform(s)',          platList,       CYAN],
+    ['🔢  Total Ads',            String(adsData.length), GREEN],
+    ['💰  Total Spend',          fmt.currency(totSpend), YELL],
+    ['👁️  Total Impressions',    fmt.number(totImpressions), PURP],
+    ['🎯  Total Reach',          fmt.number(totReach), SUBT],
+    ['✅  Total Engagement',     fmt.number(totEngagement), GREEN],
+  ];
+  meta.forEach(([k, v, vc], i) => {
+    const rowY = 1.2 + i * 0.72;
+    slide_meta_row(s1, k, v, vc, rowY);
+  });
+
+  function slide_meta_row(sl, k, v, vc, rowY) {
+    sl.addShape(pres.ShapeType.roundRect, {
+      x:5.85, y:rowY, w:7.1, h:0.6,
+      fill:{ color:CARD }, line:{ color:BORD, pt:0.6 }, rectRadius:0.08,
+    });
+    sl.addText(k, { x:6.0, y:rowY+0.12, w:4, h:0.3, fontSize:9.5, color:SUBT, ...SF });
+    sl.addText(v, { x:10.1, y:rowY+0.12, w:2.6, h:0.3, fontSize:9.5, bold:true, color:vc, align:'right', ...SF });
+  }
+
+  // ════════════════════════════════
+  // SLIDE 2 — KPI Summary
+  // ════════════════════════════════
+  const s2 = pres.addSlide();
+  bg(s2); header(s2, 'Campaign KPI Summary', `${adsData.length} ads analyzed · ${period}`);
+
+  const kpis = [
+    ['Total Spend',      fmt.currency(totSpend),     BLUE,  'Across all campaigns'],
+    ['Total Impressions',fmt.number(totImpressions), PURP,  'Total ad displays'],
+    ['Total Reach',      fmt.number(totReach),       CYAN,  'Unique accounts reached'],
+    ['Total Views',      fmt.number(totViews),       GREEN, 'Video views'],
+    ['Avg CPM',          fmt.currency(avgCpm),       YELL,  'Cost per 1,000 impressions'],
+    ['Avg CPV',          fmt.cpv(avgCpv),            RED,   'Cost per view'],
+    ['Total Clicks',     fmt.number(totClicks),      BLUE,  'Link & ad clicks'],
+    ['Total Engagement', fmt.number(totEngagement),  PURP,  'Likes, comments, shares & saves'],
+  ];
+  const KW=3.18, KH=1.0, KGAP=0.08;
+  kpis.forEach(([label, value, color, sub], i) => {
+    const col=i%4, row=Math.floor(i/4);
+    kpiCard(s2, 0.12+col*(KW+KGAP), 0.88+row*(KH+KGAP), KW, KH, label, value, color, sub);
+  });
+
+  // ════════════════════════════════
+  // SLIDE 3 — Charts (2×2 grid)
+  // ════════════════════════════════
+  const s3 = pres.addSlide();
+  bg(s3); header(s3, 'Performance Charts', 'Top 8 ads · Spend, CPM/CPV, Engagement, Audience');
+
+  const CW=6.35, CH=3.08, CGAP=0.1;
+  const gridPos = [
+    [0.12, 0.82], [6.57, 0.82],
+    [0.12, 4.05], [6.57, 4.05],
+  ];
+  const chartTitles = [
+    ['Spend per Ad',                  'Total spend distribution'],
+    ['CPM vs CPV per Ad',             'Cost efficiency comparison'],
+    ['Engagement Breakdown',          'Likes · Comments · Shares · Saves'],
+    ['Impressions vs Reach vs Views', 'Audience metrics per ad'],
+  ];
+  gridPos.forEach(([cx, cy], i) => {
+    chartCard(s3, cx, cy, CW, CH, chartTitles[i][0], chartTitles[i][1]);
+  });
+
+  // Chart 1: Spend per Ad
+  s3.addChart(pres.ChartType.bar, [
+    { name:'Spend ($)', labels:top8.map(r=>truncate(r.adName,16)), values:top8.map(r=>+r.spend.toFixed(2)) }
+  ], CHART_OPT(['3b82f6','8b5cf6','06b6d4','10b981','f59e0b','ef4444','ec4899','6366f1'], {
+    x:0.22, y:1.42, w:CW-0.22, h:CH-0.52,
+    barDir:'col', showValue:true, showLegend:false,
+  }));
+
+  // Chart 2: CPM vs CPV
+  const hasCpv = top8.some(r=>r.cpv>0);
+  const cpvData = hasCpv
+    ? [
+        { name:'CPM ($)', labels:top8.map(r=>truncate(r.adName,16)), values:top8.map(r=>+r.cpm.toFixed(2)) },
+        { name:'CPV ($)', labels:top8.map(r=>truncate(r.adName,16)), values:top8.map(r=>+r.cpv.toFixed(5)) },
+      ]
+    : [{ name:'CPM ($)', labels:top8.map(r=>truncate(r.adName,16)), values:top8.map(r=>+r.cpm.toFixed(2)) }];
+  s3.addChart(pres.ChartType.bar, cpvData, CHART_OPT(['3b82f6','8b5cf6'], {
+    x:6.67, y:1.42, w:CW-0.22, h:CH-0.52,
+    barDir:'col', barGrouping:'clustered', showValue:true, showLegend:hasCpv,
+  }));
+
+  // Chart 3: Engagement Breakdown (doughnut)
+  s3.addChart(pres.ChartType.doughnut, [
+    { name:'Engagement', labels:['Likes','Comments','Shares','Saves'], values:[totLikes,totComments,totShares,totSaves] }
+  ], CHART_OPT(['3b82f6','8b5cf6','06b6d4','10b981'], {
+    x:0.22, y:4.65, w:CW-0.22, h:CH-0.62,
+    showLabel:true, showPercent:true, showValue:false,
+    dataLabelFontSize:9, showLegend:true,
+  }));
+
+  // Chart 4: Impressions vs Reach vs Views
+  s3.addChart(pres.ChartType.bar, [
+    { name:'Impressions', labels:top8.map(r=>truncate(r.adName,16)), values:top8.map(r=>r.impressions) },
+    { name:'Reach',       labels:top8.map(r=>truncate(r.adName,16)), values:top8.map(r=>r.reach) },
+    { name:'Views',       labels:top8.map(r=>truncate(r.adName,16)), values:top8.map(r=>r.views) },
+  ], CHART_OPT(['3b82f6','8b5cf6','10b981'], {
+    x:6.67, y:4.65, w:CW-0.22, h:CH-0.62,
+    barDir:'col', barGrouping:'clustered', showValue:false, showLegend:true,
+  }));
+
+  // ════════════════════════════════
+  // SLIDE 4+ — All Ads Table
+  // ════════════════════════════════
+  const ROWS_PER = 13;
+  const chunks = [];
+  for (let i=0; i<adsData.length; i+=ROWS_PER) chunks.push(adsData.slice(i, i+ROWS_PER));
+
+  const COL_WIDTHS = [0.28, 2.4, 0.9, 0.9, 1.0, 0.75, 0.9, 0.85, 0.9, 0.78, 0.95, 0.72];
+  const COL_HEADS  = ['#','Ad Name','Platform','Spend','Impressions','CPM','Reach','Views','CPV','Clicks','Engagement','Likes'];
+
+  chunks.forEach((chunk, ci) => {
+    const st = pres.addSlide();
+    bg(st);
+    header(st,
+      `All Ads — Data Table${chunks.length>1 ? ` (${ci+1} / ${chunks.length})` : ''}`,
+      `${adsData.length} total ads · ${period}`
+    );
+
+    const hRow = COL_HEADS.map((h, hi) => T(h, {
+      bold:true, color:SUBT, fill:{ color:SURF },
+      fontSize:7, align:'center', valign:'middle',
+      border:[
+        { type:'none' }, { type:'none' },
+        { type:'solid', color:BORD, pt:0.8 }, { type:'none' },
+      ],
+      colW: COL_WIDTHS[hi],
+    }));
+
+    const dataRows = chunk.map((r, ri) => {
+      const even = ri % 2 === 0;
+      const rowFill = even ? CARD : '1c2840';
+      const c = (color, extra={}) => ({ color, fill:{ color:rowFill }, fontSize:7,
+        border:[{ type:'none' },{ type:'none' },{ type:'solid', color:BORD, pt:0.4 },{ type:'none' }],
+        valign:'middle', ...extra });
+      return [
+        T(String(ci*ROWS_PER+ri+1),          c(MUTED, { align:'center' })),
+        T(truncate(r.adName, 30),             c(TEXT)),
+        T(r.platform.name,                    c(TEXT, { align:'center' })),
+        T(r.spend  ? '$'+r.spend.toFixed(2):'—', c(BLUE,  { align:'right' })),
+        T(fmt.rawN(r.impressions),            c(TEXT,  { align:'right' })),
+        T(r.cpm    ? '$'+r.cpm.toFixed(2):'—',   c(YELL,  { align:'right' })),
+        T(fmt.rawN(r.reach),                  c(TEXT,  { align:'right' })),
+        T(fmt.rawN(r.views),                  c(TEXT,  { align:'right' })),
+        T(r.cpv    ? '$'+r.cpv.toFixed(5):'—',   c(RED,   { align:'right' })),
+        T(fmt.rawN(r.clicks),                 c(TEXT,  { align:'right' })),
+        T(fmt.rawN(r.engagement),             c(PURP,  { align:'right' })),
+        T(fmt.rawN(r.likes),                  c(TEXT,  { align:'right' })),
+      ];
+    });
+
+    st.addTable([hRow, ...dataRows], {
+      x:0.14, y:0.85, w:13.05, rowH:0.27,
+      border:{ type:'solid', color:BORD, pt:0.4 },
+      autoPage:false,
+    });
+  });
+
+  // ════════════════════════════════
+  // SLIDE — AI Analysis (if run)
+  // ════════════════════════════════
+  const panels = [
+    ['📊  Ad Analysis',     document.getElementById('panel-analysis')?.innerText?.trim()],
+    ['📝  Key Notes',       document.getElementById('panel-notes')?.innerText?.trim()],
+    ['💡  Recommendations', document.getElementById('panel-recommendations')?.innerText?.trim()],
+  ];
+  const hasAnalysis = panels.some(([, txt]) => txt && !txt.includes('Loading') && txt.length > 10);
+
+  if (hasAnalysis) {
+    panels.forEach(([title, body]) => {
+      if (!body || body.includes('Loading') || body.length < 10) return;
+      const sa = pres.addSlide();
+      bg(sa); header(sa, title, 'Smart analysis from uploaded campaign data');
+      // Content card
+      sa.addShape(pres.ShapeType.roundRect, {
+        x:0.2, y:0.85, w:12.93, h:6.4,
+        fill:{ color:CARD }, line:{ color:BORD, pt:0.8 }, rectRadius:0.14,
+      });
+      // Left accent bar inside card
+      sa.addShape(pres.ShapeType.roundRect, {
+        x:0.2, y:0.85, w:0.055, h:6.4,
+        fill:{ color:BLUE }, line:{ type:'none' }, rectRadius:0.06,
+      });
+      sa.addText(body.slice(0, 2600), {
+        x:0.38, y:0.98, w:12.6, h:6.1,
+        fontSize:9, color:SUBT, ...SF,
+        valign:'top', wrap:true, lineSpacingMultiple:1.5,
+      });
+    });
+  }
+
+  const baseName = fileName.replace(/\.[^.]+$/, '') || 'AdAnalytics';
+  await pres.writeFile({ fileName: `${baseName}_Report.pptx` });
+  showToast('✅ PowerPoint downloaded!', 'success');
+}
+
+/* ════════════════════════════════════════════════
+   TAB SWITCHING
+════════════════════════════════════════════════ */
+function switchTab(tab) {
+  document.getElementById('tabDashboard').style.display  = tab === 'dashboard'  ? 'block' : 'none';
+  document.getElementById('tabComparison').style.display = tab === 'comparison' ? 'block' : 'none';
+  document.getElementById('tabBtnDashboard').classList.toggle('active',  tab === 'dashboard');
+  document.getElementById('tabBtnComparison').classList.toggle('active', tab === 'comparison');
+}
+
+/* ════════════════════════════════════════════════
+   COMPARISON STATE
+════════════════════════════════════════════════ */
+const CMP = {
+  curr: { rows: [], ads: [], totals: {}, fileName: '', period: '—' },
+  prev: { rows: [], ads: [], totals: {}, fileName: '', period: '—' },
+};
+let compCharts = {};
+
+function cmpTotals(ads) {
+  return {
+    spend:       ads.reduce((s,r) => s+r.spend, 0),
+    impressions: ads.reduce((s,r) => s+r.impressions, 0),
+    reach:       ads.reduce((s,r) => s+r.reach, 0),
+    views:       ads.reduce((s,r) => s+r.views, 0),
+    clicks:      ads.reduce((s,r) => s+r.clicks, 0),
+    engagement:  ads.reduce((s,r) => s+r.engagement, 0),
+    likes:       ads.reduce((s,r) => s+r.likes, 0),
+    comments:    ads.reduce((s,r) => s+r.comments, 0),
+    shares:      ads.reduce((s,r) => s+r.shares, 0),
+    saves:       ads.reduce((s,r) => s+r.saves, 0),
+  };
+}
+function cmpCpm(t)  { return t.impressions ? (t.spend / t.impressions) * 1000 : 0; }
+function cmpCpv(t)  { return t.views       ?  t.spend / t.views : 0; }
+function cmpCtr(t)  { return t.impressions ? (t.clicks / t.impressions) * 100 : 0; }
+function cmpCpc(t)  { return t.clicks      ?  t.spend / t.clicks : 0; }
+function cmpEngR(t) { return t.impressions ? (t.engagement / t.impressions) * 100 : 0; }
+
+/* ── File Handling ── */
+function handleCompareFile(slot, input) {
+  const file = input.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = e => loadCompareBuffer(slot, e.target.result, file.name);
+  reader.readAsArrayBuffer(file);
+}
+
+function loadCompareBuffer(slot, arrayBuffer, name) {
+    try {
+      const wb   = XLSX.read(new Uint8Array(arrayBuffer), { type:'array', cellDates:true });
+      const ws   = wb.Sheets[wb.SheetNames[0]];
+      const rows = XLSX.utils.sheet_to_json(ws, { defval:'' });
+      if (!rows.length) { showToast('⚠️ File appears empty.', 'error'); return; }
+
+      CMP[slot].rows     = rows;
+      CMP[slot].fileName = name;
+      CMP[slot].period   = extractInsightsDate(rows) !== '—'
+        ? extractInsightsDate(rows)
+        : name.replace(/\.[^.]+$/, '');
+
+      // Reuse existing processData logic but store in CMP
+      const headers = Object.keys(rows[0]);
+      const cols = {};
+      for (const k of Object.keys(COL_MAP)) cols[k] = findCol(headers, k);
+
+      CMP[slot].ads = rows.map((row, i) => {
+        const spend       = n(cols.spend       ? row[cols.spend]       : 0);
+        const impressions = n(cols.impressions ? row[cols.impressions] : 0);
+        const reach       = n(cols.reach       ? row[cols.reach]       : 0);
+        const views       = n(cols.views       ? row[cols.views]       : 0);
+        const clicks      = n(cols.clicks      ? row[cols.clicks]      : 0);
+        const likes       = n(cols.likes       ? row[cols.likes]       : 0);
+        const comments    = n(cols.comments    ? row[cols.comments]    : 0);
+        const shares      = n(cols.shares      ? row[cols.shares]      : 0);
+        const saves       = n(cols.saves       ? row[cols.saves]       : 0);
+        const engagement  = cols.engagement
+          ? (n(row[cols.engagement]) || likes + comments + shares + saves)
+          : likes + comments + shares + saves;
+        const cpm = impressions ? (spend / impressions) * 1000 : 0;
+        const cpv = views       ?  spend / views : 0;
+
+        let platform;
+        if (cols.platform && row[cols.platform]) {
+          const pv = String(row[cols.platform]).toLowerCase();
+          const match = PLATFORM_RULES.find(p => p.keywords.some(k => pv.includes(k)));
+          platform = match ? { name: match.name, color: match.color } : { name: String(row[cols.platform]), color:'unknown' };
+        } else { platform = guessPlatform(row); }
+
+        const adName = cols.adName ? String(row[cols.adName] || `Ad ${i+1}`) : `Ad ${i+1}`;
+        return { adName, platform, spend, impressions, reach, views, clicks, engagement, likes, comments, shares, saves, cpm, cpv };
+      });
+
+      CMP[slot].totals = cmpTotals(CMP[slot].ads);
+
+      // Update UI
+      document.getElementById(`fileDone${slot.charAt(0).toUpperCase()+slot.slice(1)}`).style.display = 'flex';
+      document.getElementById(`fileName${slot.charAt(0).toUpperCase()+slot.slice(1)}`).textContent   = name;
+      document.getElementById(`drop${slot.charAt(0).toUpperCase()+slot.slice(1)}`).style.opacity     = '0.4';
+      document.getElementById(`drop${slot.charAt(0).toUpperCase()+slot.slice(1)}`).style.pointerEvents = 'none';
+
+      showToast(`✅ ${slot === 'curr' ? 'Current' : 'Previous'} period loaded!`, 'success');
+
+      if (CMP.curr.ads.length && CMP.prev.ads.length) renderComparison();
+    } catch(err) { showToast('❌ Parse error: ' + err.message, 'error'); }
+}
+
+function clearCompareFile(slot) {
+  CMP[slot] = { rows:[], ads:[], totals:{}, fileName:'', period:'—' };
+  const cap = slot.charAt(0).toUpperCase()+slot.slice(1);
+  document.getElementById(`fileDone${cap}`).style.display = 'none';
+  document.getElementById(`drop${cap}`).style.opacity = '';
+  document.getElementById(`drop${cap}`).style.pointerEvents = '';
+  document.getElementById('compDashboard').style.display = 'none';
+  document.getElementById('compHero').style.display = '';
+}
+
+function resetComparison() {
+  clearCompareFile('curr');
+  clearCompareFile('prev');
+}
+
+/* ── Render Comparison Dashboard ── */
+function renderComparison() {
+  document.getElementById('compHero').style.display = 'none';
+  document.getElementById('compDashboard').style.display = 'block';
+
+  const C = CMP.curr.totals, P = CMP.prev.totals;
+  const cCpm = cmpCpm(C), pCpm = cmpCpm(P);
+  const cCpv = cmpCpv(C), pCpv = cmpCpv(P);
+  const cCtr = cmpCtr(C), pCtr = cmpCtr(P);
+  const cEngR = cmpEngR(C), pEngR = cmpEngR(P);
+
+  // Period labels
+  document.getElementById('compLabelCurr').textContent = CMP.curr.period;
+  document.getElementById('compLabelPrev').textContent = CMP.prev.period;
+  document.getElementById('thCurr').textContent = CMP.curr.period;
+  document.getElementById('thPrev').textContent = CMP.prev.period;
+
+  const cCpc = cmpCpc(C), pCpc = cmpCpc(P);
+
+  renderCompKpis(C, P, cCpm, pCpm, cCpv, pCpv);
+  try { renderCompCharts(C, P, cCpm, pCpm, cCpv, pCpv, cCtr, pCtr, cCpc, pCpc); } catch(e) { console.error('Comparison charts error:', e); }
+  renderCompSummaryTable(C, P, cCpm, pCpm, cCpv, pCpv, cCtr, pCtr, cEngR, pEngR);
+  renderCompAdsTable();
+  renderExecSummary(C, P, cCpm, pCpm, cCpv, pCpv, cCtr, pCtr, cEngR, pEngR, cCpc, pCpc);
+}
+
+/* ── KPI Cards ── */
+function renderCompKpis(C, P, cCpm, pCpm, cCpv, pCpv) {
+  const metrics = [
+    { label:'Total Spend',       curr:C.spend,       prev:P.spend,       fmt: v => fmt.currency(v),    color:'kpi-accent-blue'   },
+    { label:'Total Impressions', curr:C.impressions,  prev:P.impressions,  fmt: v => fmt.number(v),      color:'kpi-accent-purple' },
+    { label:'Total Reach',       curr:C.reach,        prev:P.reach,        fmt: v => fmt.number(v),      color:'kpi-accent-cyan'   },
+    { label:'Total Views',       curr:C.views,        prev:P.views,        fmt: v => fmt.number(v),      color:'kpi-accent-green'  },
+    { label:'Avg CPM',           curr:cCpm,           prev:pCpm,           fmt: v => fmt.currency(v),    color:'kpi-accent-yellow', lowerIsBetter:true },
+    { label:'Avg CPV',           curr:cCpv,           prev:pCpv,           fmt: v => fmt.cpv(v),         color:'kpi-accent-red',    lowerIsBetter:true },
+    { label:'Total Clicks',      curr:C.clicks,       prev:P.clicks,       fmt: v => fmt.number(v),      color:'kpi-accent-blue'   },
+    { label:'Total Engagement',  curr:C.engagement,   prev:P.engagement,   fmt: v => fmt.number(v),      color:'kpi-accent-purple' },
+  ];
+
+  document.getElementById('compKpiGrid').innerHTML = metrics.map(m => {
+    const badge = changeBadge(m.curr, m.prev, m.lowerIsBetter);
+    const diff  = m.curr - m.prev;
+    const sign = diff >= 0 ? '+' : '-';
+    const rawFmt = m.fmt(Math.abs(diff));
+    const absFmt = rawFmt.startsWith('$') ? sign + rawFmt : sign + rawFmt;
+
+    return `<div class="comp-kpi-card">
+      <div class="comp-kpi-label">${m.label}</div>
+      <div class="comp-kpi-row">
+        <div class="comp-kpi-curr ${m.color}">${m.fmt(m.curr)}</div>
+        <div class="comp-kpi-prev">prev: ${m.fmt(m.prev)}</div>
+      </div>
+      <div class="comp-kpi-footer">
+        ${badge}
+        <span class="change-abs">${absFmt}</span>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function changeBadge(curr, prev, lowerIsBetter = false) {
+  if (!prev) return `<span class="change-badge change-flat">— N/A</span>`;
+  const pct = ((curr - prev) / prev) * 100;
+  const cls   = Math.abs(pct) < 0.5 ? 'change-flat' : pct > 0 ? 'change-up' : 'change-down';
+  const arrow = Math.abs(pct) < 0.5 ? '→' : pct > 0 ? '▲' : '▼';
+  return `<span class="change-badge ${cls}">${arrow} ${pct >= 0 ? '+' : ''}${pct.toFixed(1)}%</span>`;
+}
+
+/* ── Charts ── */
+function renderCompCharts(C, P, cCpm, pCpm, cCpv, pCpv, cCtr, pCtr, cCpc, pCpc) {
+  const baseOpts = (yFmt) => ({
+    responsive: true,
+    maintainAspectRatio: false,
+    interaction: { mode:'index', intersect:false },
+    plugins: {
+      legend: { position:'bottom', labels:{ padding:14, color:'#94a3b8', boxWidth:12, boxHeight:12 } },
+      tooltip: {
+        backgroundColor:'#1a2235', borderColor:'#1e3a5f', borderWidth:1,
+        titleColor:'#e2e8f0', bodyColor:'#94a3b8',
+      }
+    },
+    scales: {
+      x: { ticks:{ color:'#64748b', maxRotation:20, font:{size:11} }, grid:{ color:'rgba(30,58,95,0.4)' } },
+      y: { ticks:{ color:'#64748b', callback: yFmt }, grid:{ color:'rgba(30,58,95,0.4)' } }
+    }
+  });
+
+  // Efficiency Metrics — grouped bar with previous and current values
+  const effMetrics = [
+    { label:'CPM',  prev:pCpm,  curr:cCpm,  unit:'$',  skip: false },
+    { label:'CPV',  prev:pCpv,  curr:cCpv,  unit:'$',  skip: pCpv === 0 && cCpv === 0 },
+    { label:'CTR',  prev:pCtr,  curr:cCtr,  unit:'%',  skip: false },
+    { label:'CPC',  prev:pCpc,  curr:cCpc,  unit:'$',  skip: pCpc === 0 && cCpc === 0 },
+  ].filter(m => !m.skip);
+
+  const effLabels = effMetrics.map(m => m.label);
+  const effPrevData = effMetrics.map(m => +m.prev.toFixed(m.unit === '$' && m.prev < 0.1 ? 5 : 2));
+  const effCurrData = effMetrics.map(m => +m.curr.toFixed(m.unit === '$' && m.curr < 0.1 ? 5 : 2));
+
+  if (compCharts.efficiency) compCharts.efficiency.destroy();
+  compCharts.efficiency = new Chart(document.getElementById('compEfficiencyChart'), {
+    type: 'bar',
+    data: {
+      labels: effLabels,
+      datasets: [
+        { label: `Prev: ${CMP.prev.period}`, data: effPrevData, backgroundColor: '#64748b88', borderColor: '#64748b', borderWidth: 1, borderRadius: 4 },
+        { label: `Curr: ${CMP.curr.period}`, data: effCurrData, backgroundColor: '#3b82f6cc', borderColor: '#3b82f6', borderWidth: 1, borderRadius: 4 },
+      ]
+    },
+    options: {
+      ...baseOpts(v => {
+        if (v < 0.01) return '$' + v.toFixed(5);
+        if (v < 1) return '$' + v.toFixed(3);
+        return '$' + v.toFixed(2);
+      }),
+      plugins: {
+        ...baseOpts().plugins,
+        tooltip: {
+          backgroundColor:'#1a2235', borderColor:'#1e3a5f', borderWidth:1,
+          titleColor:'#e2e8f0', bodyColor:'#94a3b8',
+          callbacks: {
+            label: ctx => {
+              const m = effMetrics[ctx.dataIndex];
+              const val = ctx.raw;
+              const fmtVal = m.unit === '$' ? '$' + val.toFixed(val < 0.1 ? 5 : 2) : val.toFixed(2) + '%';
+              return ` ${ctx.dataset.label}: ${fmtVal}`;
+            }
+          }
+        }
+      },
+    }
+  });
+
+  // Performance Metrics — totals comparison (grouped bar)
+  if (compCharts.audience) compCharts.audience.destroy();
+  compCharts.audience = new Chart(document.getElementById('compAudienceChart'), {
+    type: 'bar',
+    data: {
+      labels: ['Impressions','Reach','Views','Clicks','Engagement'],
+      datasets: [
+        { label:`Prev: ${CMP.prev.period}`, data:[P.impressions,P.reach,P.views,P.clicks,P.engagement], backgroundColor:'#64748b88', borderColor:'#64748b', borderWidth:1, borderRadius:4 },
+        { label:`Curr: ${CMP.curr.period}`, data:[C.impressions,C.reach,C.views,C.clicks,C.engagement], backgroundColor:'#3b82f6cc', borderColor:'#3b82f6', borderWidth:1, borderRadius:4 },
+      ]
+    },
+    options: {
+      ...baseOpts(v => fmt.short(v)),
+      plugins: {
+        ...baseOpts().plugins,
+        tooltip: {
+          backgroundColor:'#1a2235', borderColor:'#1e3a5f', borderWidth:1,
+          titleColor:'#e2e8f0', bodyColor:'#94a3b8',
+          callbacks: { label: ctx => ` ${ctx.dataset.label}: ${fmt.number(ctx.raw)}` }
+        }
+      }
+    }
+  });
+}
+
+/* ── Summary Table ── */
+function renderCompSummaryTable(C, P, cCpm, pCpm, cCpv, pCpv, cCtr, pCtr, cEngR, pEngR) {
+  const rows = [
+    { name:'Total Spend',        prev:P.spend,       curr:C.spend,       fmtV: v=>fmt.currency(v),   lowerIsBetter:false },
+    { name:'Total Impressions',  prev:P.impressions,  curr:C.impressions,  fmtV: v=>fmt.number(v),     lowerIsBetter:false },
+    { name:'Total Reach',        prev:P.reach,        curr:C.reach,        fmtV: v=>fmt.number(v),     lowerIsBetter:false },
+    { name:'Total Views',        prev:P.views,        curr:C.views,        fmtV: v=>fmt.number(v),     lowerIsBetter:false },
+    { name:'Total Clicks',       prev:P.clicks,       curr:C.clicks,       fmtV: v=>fmt.number(v),     lowerIsBetter:false },
+    { name:'Total Engagement',   prev:P.engagement,   curr:C.engagement,   fmtV: v=>fmt.number(v),     lowerIsBetter:false },
+    { name:'Likes',              prev:P.likes,        curr:C.likes,        fmtV: v=>fmt.number(v),     lowerIsBetter:false },
+    { name:'Comments',           prev:P.comments,     curr:C.comments,     fmtV: v=>fmt.number(v),     lowerIsBetter:false },
+    { name:'Shares',             prev:P.shares,       curr:C.shares,       fmtV: v=>fmt.number(v),     lowerIsBetter:false },
+    { name:'Saves',              prev:P.saves,        curr:C.saves,        fmtV: v=>fmt.number(v),     lowerIsBetter:false },
+    { name:'Avg CPM',            prev:pCpm,           curr:cCpm,           fmtV: v=>fmt.currency(v),   lowerIsBetter:true  },
+    { name:'Avg CPV',            prev:pCpv,           curr:cCpv,           fmtV: v=>fmt.cpv(v),        lowerIsBetter:true  },
+    { name:'CTR (%)',            prev:pCtr,           curr:cCtr,           fmtV: v=>v.toFixed(2)+'%',  lowerIsBetter:false },
+    { name:'Engagement Rate (%)',prev:pEngR,          curr:cEngR,          fmtV: v=>v.toFixed(2)+'%',  lowerIsBetter:false },
+  ];
+
+  document.getElementById('compSummaryBody').innerHTML = rows.map(r => {
+    const diff    = r.curr - r.prev;
+    const pctChg  = r.prev ? ((diff / r.prev) * 100) : null;
+    const cls     = pctChg === null || Math.abs(pctChg) < 0.5 ? 'change-flat' : pctChg > 0 ? 'change-up' : 'change-down';
+    const arrow   = pctChg === null || Math.abs(pctChg) < 0.5 ? '→' : pctChg > 0 ? '▲' : '▼';
+    const absStr  = (diff >= 0 ? '+' : '') + r.fmtV(Math.abs(diff));
+    const pctStr  = pctChg !== null ? `${pctChg >= 0 ? '+' : ''}${pctChg.toFixed(1)}%` : '—';
+
+    return `<tr>
+      <td class="metric-name">${r.name}</td>
+      <td class="prev-val">${r.fmtV(r.prev)}</td>
+      <td class="curr-val" style="color:var(--accent)">${r.fmtV(r.curr)}</td>
+      <td style="color:var(--subtle)">${r.fmtV(Math.abs(diff)).replace(/^\+?/, diff < 0 ? '-' : '+').replace('+-','-')}</td>
+      <td><span class="change-badge ${cls}">${arrow} ${pctStr}</span></td>
+    </tr>`;
+  }).join('');
+}
+
+/* ── Ads Comparison Table ── */
+function renderCompAdsTable() {
+  const currAds = CMP.curr.ads;
+  const prevAds = CMP.prev.ads;
+  const allNames = [...new Set([...currAds.map(r=>r.adName), ...prevAds.map(r=>r.adName)])];
+
+  const getAd = (list, name) => list.find(r=>r.adName===name) || null;
+
+  const rows = allNames.map(name => {
+    const c = getAd(currAds, name);
+    const p = getAd(prevAds, name);
+    const status = c && p ? 'both' : c ? 'new' : 'ended';
+    return { name, c, p, status };
+  });
+
+  // Sort: both first, then new, then ended
+  rows.sort((a,b) => {
+    const order = { both:0, new:1, ended:2 };
+    return order[a.status] - order[b.status];
+  });
+
+  const cv = (v, fmtFn) => v !== null && v !== undefined ? fmtFn(v) : '—';
+  const deltaCell = (curr, prev, fmtFn, lowerIsBetter=false) => {
+    if (curr == null || prev == null) return `<td style="color:var(--muted)">—</td>`;
+    const diff = curr - prev;
+    const up = lowerIsBetter ? diff < 0 : diff > 0;
+    const cls = Math.abs(diff) < 0.001 ? 'change-flat' : up ? 'change-up' : 'change-down';
+    const arrow = Math.abs(diff) < 0.001 ? '→' : up ? '▲' : '▼';
+    const pct = prev ? ((diff/prev)*100).toFixed(1) : '—';
+    return `<td><span class="change-badge ${cls}">${arrow} ${pct}%</span></td>`;
+  };
+
+  const statusBadge = s => {
+    if (s === 'new')   return `<span class="change-badge change-up">🆕 New</span>`;
+    if (s === 'ended') return `<span class="change-badge change-down">⏹ Ended</span>`;
+    return `<span class="change-badge change-flat">↔ Both</span>`;
+  };
+
+  document.getElementById('compAdsBody').innerHTML = rows.map(({name, c, p, status}) => `
+    <tr>
+      <td style="max-width:220px;overflow:hidden;text-overflow:ellipsis;color:var(--text);font-weight:600;" title="${esc(name)}">${esc(truncate(name,36))}</td>
+      <td>${(c||p) ? `<span class="platform-badge platform-${(c||p).platform.color}">${platformIcon((c||p).platform.name)} ${(c||p).platform.name}</span>` : '—'}</td>
+      <td style="color:var(--muted)">${cv(p?.spend, v=>'$'+v.toFixed(2))}</td>
+      <td style="color:var(--accent)">${cv(c?.spend, v=>'$'+v.toFixed(2))}</td>
+      ${deltaCell(c?.spend,    p?.spend)}
+      <td style="color:var(--muted)">${cv(p?.impressions, fmt.rawN)}</td>
+      <td>${cv(c?.impressions, fmt.rawN)}</td>
+      <td style="color:var(--muted)">${cv(p?.cpm, v=>'$'+v.toFixed(2))}</td>
+      <td style="color:var(--yellow)">${cv(c?.cpm, v=>'$'+v.toFixed(2))}</td>
+      ${deltaCell(c?.cpm,      p?.cpm, v=>v.toFixed(2), true)}
+      <td style="color:var(--muted)">${cv(p?.views, fmt.rawN)}</td>
+      <td>${cv(c?.views, fmt.rawN)}</td>
+      <td style="color:var(--muted)">${cv(p?.cpv, v=>'$'+v.toFixed(5))}</td>
+      <td style="color:var(--red)">${cv(c?.cpv, v=>'$'+v.toFixed(5))}</td>
+      <td style="color:var(--muted)">${cv(p?.engagement, fmt.rawN)}</td>
+      <td style="color:var(--accent2)">${cv(c?.engagement, fmt.rawN)}</td>
+      ${deltaCell(c?.engagement, p?.engagement)}
+      <td>${statusBadge(status)}</td>
+    </tr>
+  `).join('');
+}
+
+/* ── Executive Summary ── */
+function renderExecSummary(C, P, cCpm, pCpm, cCpv, pCpv, cCtr, pCtr, cEngR, pEngR, cCpc, pCpc) {
+  // Show container and update label immediately (before any build that could error)
+  document.getElementById('execSummaryContent').style.display = 'block';
+  document.getElementById('execSummaryLabel').textContent = `${CMP.prev.period} → ${CMP.curr.period} · ${CMP.curr.ads.length} ads analysed`;
+  try {
+    const result = buildExecSummary(C, P, cCpm, pCpm, cCpv, pCpv, cCtr, pCtr, cEngR, pEngR, cCpc, pCpc);
+    document.getElementById('epanel-overview').innerHTML = result.overview;
+    document.getElementById('epanel-winners').innerHTML  = result.winners;
+    document.getElementById('epanel-recs').innerHTML     = result.recs;
+  } catch(e) {
+    console.error('Executive summary build error:', e);
+    document.getElementById('epanel-overview').innerHTML = '<p style="color:var(--muted)">Summary could not be generated for this data.</p>';
+  }
+}
+
+function switchExecTab(name, btn) {
+  document.querySelectorAll('#execSummaryContent .ai-tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('#execSummaryContent .ai-panel').forEach(p => p.classList.remove('active'));
+  btn.classList.add('active');
+  document.getElementById(`epanel-${name}`).classList.add('active');
+}
+
+function buildExecSummary(C, P, cCpm, pCpm, cCpv, pCpv, cCtr, pCtr, cEngR, pEngR, cCpc, pCpc) {
+
+  const chg  = (curr, prev) => prev ? ((curr-prev)/prev*100) : null;
+  const pctStr = (curr, prev, lowerIsBetter = false) => {
+    const p = chg(curr, prev);
+    if (p === null) return '<span style="color:var(--muted)">N/A</span>';
+    const good  = lowerIsBetter ? p < 0 : p > 0;
+    const cls   = Math.abs(p) < 0.5 ? 'change-flat' : good ? 'change-up' : 'change-down';
+    const arrow = Math.abs(p) < 0.5 ? '→' : p > 0 ? '▲' : '▼';
+    return `<span class="change-badge ${cls}">${arrow} ${p>0?'+':''}${p.toFixed(1)}%</span>`;
+  };
+
+  const currPeriod = CMP.curr.period, prevPeriod = CMP.prev.period;
+
+  /* ── OVERVIEW ── */
+  let overview = `<h4>Period-over-Period Overview</h4>
+    <p>Comparing <strong>${prevPeriod}</strong> → <strong>${currPeriod}</strong> across ${CMP.curr.ads.length} current ads and ${CMP.prev.ads.length} previous ads.</p>
+    <ul>
+      <li>Total Spend: <strong>${fmt.currency(P.spend)}</strong> → <strong style="color:var(--accent)">${fmt.currency(C.spend)}</strong> ${pctStr(C.spend,P.spend)}</li>
+      <li>Total Impressions: <strong>${fmt.number(P.impressions)}</strong> → <strong style="color:var(--accent)">${fmt.number(C.impressions)}</strong> ${pctStr(C.impressions,P.impressions)}</li>
+      <li>Total Reach: <strong>${fmt.number(P.reach)}</strong> → <strong style="color:var(--accent)">${fmt.number(C.reach)}</strong> ${pctStr(C.reach,P.reach)}</li>
+      <li>Total Views: <strong>${fmt.number(P.views)}</strong> → <strong style="color:var(--accent)">${fmt.number(C.views)}</strong> ${pctStr(C.views,P.views)}</li>
+      <li>Total Clicks: <strong>${fmt.number(P.clicks)}</strong> → <strong style="color:var(--accent)">${fmt.number(C.clicks)}</strong> ${pctStr(C.clicks,P.clicks)}</li>
+      <li>Total Engagement: <strong>${fmt.number(P.engagement)}</strong> → <strong style="color:var(--accent)">${fmt.number(C.engagement)}</strong> ${pctStr(C.engagement,P.engagement)}</li>
+    </ul>
+    <h4>Cost Efficiency Changes</h4>
+    <ul>
+      <li>Avg CPM: <strong>${fmt.currency(pCpm)}</strong> → <strong style="color:var(--yellow)">${fmt.currency(cCpm)}</strong> ${pctStr(cCpm,pCpm)}
+        ${cCpm < pCpm ? ' — <span style="color:var(--green)">✅ Improved efficiency, cheaper impressions.</span>' : cCpm > pCpm ? ' — <span style="color:var(--red)">⚠️ Higher cost per impression this period.</span>' : ''}</li>
+      ${P.views > 0 || C.views > 0 ? `<li>Avg CPV: <strong>${fmt.cpv(pCpv)}</strong> → <strong style="color:var(--red)">${fmt.cpv(cCpv)}</strong> ${pctStr(cCpv,pCpv)}
+        ${cCpv < pCpv ? ' — <span style="color:var(--green)">✅ Video views became more affordable.</span>' : cCpv > pCpv ? ' — <span style="color:var(--red)">⚠️ Views cost more this period.</span>' : ''}</li>` : ''}
+      ${(P.clicks > 0 || C.clicks > 0) && (pCpc > 0 || cCpc > 0) ? `<li>Avg CPC: <strong>${fmt.currency(pCpc)}</strong> → <strong style="color:var(--yellow)">${fmt.currency(cCpc)}</strong> ${pctStr(cCpc,pCpc)}
+        ${cCpc < pCpc ? ' — <span style="color:var(--green)">✅ Cheaper clicks this period.</span>' : cCpc > pCpc ? ' — <span style="color:var(--red)">⚠️ Higher cost per click this period.</span>' : ''}</li>` : ''}
+      <li>CTR: <strong>${pCtr.toFixed(2)}%</strong> → <strong style="color:var(--accent)">${cCtr.toFixed(2)}%</strong> ${pctStr(cCtr,pCtr)}
+        ${cCtr > pCtr ? ' — <span style="color:var(--green)">✅ Click rate improved.</span>' : cCtr < pCtr ? ' — <span style="color:var(--red)">⚠️ Click rate declined.</span>' : ''}</li>
+      <li>Engagement Rate: <strong>${pEngR.toFixed(2)}%</strong> → <strong style="color:var(--accent2)">${cEngR.toFixed(2)}%</strong> ${pctStr(cEngR,pEngR)}
+        ${cEngR > pEngR ? ' — <span style="color:var(--green)">✅ Audience more engaged this period.</span>' : cEngR < pEngR ? ' — <span style="color:var(--red)">⚠️ Engagement rate dropped.</span>' : ''}</li>
+    </ul>
+    <h4>Engagement Composition</h4>
+    <ul>
+      <li>Likes: ${fmt.number(P.likes)} → <strong>${fmt.number(C.likes)}</strong> ${pctStr(C.likes,P.likes)}</li>
+      <li>Comments: ${fmt.number(P.comments)} → <strong>${fmt.number(C.comments)}</strong> ${pctStr(C.comments,P.comments)}</li>
+      <li>Shares: ${fmt.number(P.shares)} → <strong>${fmt.number(C.shares)}</strong> ${pctStr(C.shares,P.shares)}</li>
+      <li>Saves: ${fmt.number(P.saves)} → <strong>${fmt.number(C.saves)}</strong> ${pctStr(C.saves,P.saves)}</li>
+    </ul>`;
+
+  // New / ended ads
+  const currNames = new Set(CMP.curr.ads.map(r=>r.adName));
+  const prevNames = new Set(CMP.prev.ads.map(r=>r.adName));
+  const newAds    = CMP.curr.ads.filter(r=>!prevNames.has(r.adName));
+  const endedAds  = CMP.prev.ads.filter(r=>!currNames.has(r.adName));
+  const contAds   = CMP.curr.ads.filter(r=>prevNames.has(r.adName));
+
+  overview += `<h4>Ad Portfolio Changes</h4>
+    <ul>
+      <li><strong>${contAds.length}</strong> ads ran in both periods</li>
+      <li><strong style="color:var(--green)">${newAds.length} new ads</strong> launched this period${newAds.length ? ': ' + newAds.slice(0,3).map(r=>`<em>${truncate(r.adName,30)}</em>`).join(', ') : ''}</li>
+      <li><strong style="color:var(--muted)">${endedAds.length} ads ended</strong> (ran previous, not current)${endedAds.length ? ': ' + endedAds.slice(0,3).map(r=>`<em>${truncate(r.adName,30)}</em>`).join(', ') : ''}</li>
+    </ul>`;
+
+  /* ── WINNERS & LOSERS ── */
+  const bothAds = CMP.curr.ads.filter(r => prevNames.has(r.adName)).map(c => {
+    const p = CMP.prev.ads.find(r=>r.adName===c.adName);
+    return { name:c.adName, platform:c.platform,
+      spendChg: p.spend   ? (c.spend-p.spend)/p.spend*100         : null,
+      cpmChg:   p.cpm     ? (c.cpm-p.cpm)/p.cpm*100               : null,
+      engChg:   p.engagement ? (c.engagement-p.engagement)/p.engagement*100 : null,
+      ctrChg:   p.impressions ? ((c.clicks/c.impressions)-(p.clicks/p.impressions))/(p.clicks/p.impressions||0.0001)*100 : null,
+      currSpend:c.spend, prevSpend:p.spend,
+      currCpm:c.cpm, prevCpm:p.cpm,
+      currEng:c.engagement, prevEng:p.engagement,
+    };
+  });
+
+  const topEngWinners = [...bothAds].filter(r=>r.engChg!==null).sort((a,b)=>b.engChg-a.engChg).slice(0,3);
+  const topEngLosers  = [...bothAds].filter(r=>r.engChg!==null).sort((a,b)=>a.engChg-b.engChg).slice(0,3);
+  const topCpmWinners = [...bothAds].filter(r=>r.cpmChg!==null).sort((a,b)=>a.cpmChg-b.cpmChg).slice(0,3); // lower is better
+  const topCpmLosers  = [...bothAds].filter(r=>r.cpmChg!==null).sort((a,b)=>b.cpmChg-a.cpmChg).slice(0,3);
+
+  let winners = `<h4>🏆 Biggest Engagement Winners</h4>`;
+  if (topEngWinners.length) {
+    winners += `<ul>${topEngWinners.map(r=>`<li><strong>${truncate(r.name,40)}</strong> (${r.platform.name}) — Engagement <span class="change-badge change-up">▲ +${r.engChg.toFixed(1)}%</span> · ${fmt.number(r.prevEng)} → ${fmt.number(r.currEng)}</li>`).join('')}</ul>`;
+  } else { winners += `<p style="color:var(--muted)">No overlapping ads to compare.</p>`; }
+
+  winners += `<h4>📉 Biggest Engagement Declines</h4>`;
+  if (topEngLosers.length && topEngLosers[0].engChg < 0) {
+    winners += `<ul>${topEngLosers.filter(r=>r.engChg<0).map(r=>`<li><strong>${truncate(r.name,40)}</strong> (${r.platform.name}) — Engagement <span class="change-badge change-down">▼ ${r.engChg.toFixed(1)}%</span> · ${fmt.number(r.prevEng)} → ${fmt.number(r.currEng)}</li>`).join('')}</ul>`;
+  } else { winners += `<p style="color:var(--green)">✅ No significant engagement declines.</p>`; }
+
+  winners += `<h4>💰 Best CPM Improvements</h4>`;
+  if (topCpmWinners.length && topCpmWinners[0].cpmChg < 0) {
+    winners += `<ul>${topCpmWinners.filter(r=>r.cpmChg<0).map(r=>`<li><strong>${truncate(r.name,40)}</strong> — CPM improved <span class="change-badge change-up">▲ ${Math.abs(r.cpmChg).toFixed(1)}% cheaper</span> · $${r.prevCpm.toFixed(2)} → $${r.currCpm.toFixed(2)}</li>`).join('')}</ul>`;
+  } else { winners += `<p style="color:var(--muted)">No CPM improvements among overlapping ads.</p>`; }
+
+  winners += `<h4>⚠️ CPM Increases (Higher Cost)</h4>`;
+  if (topCpmLosers.length && topCpmLosers[0].cpmChg > 0) {
+    winners += `<ul>${topCpmLosers.filter(r=>r.cpmChg>0).map(r=>`<li><strong>${truncate(r.name,40)}</strong> — CPM increased <span class="change-badge change-down">▼ +${r.cpmChg.toFixed(1)}% more expensive</span> · $${r.prevCpm.toFixed(2)} → $${r.currCpm.toFixed(2)}</li>`).join('')}</ul>`;
+  } else { winners += `<p style="color:var(--green)">✅ No CPM increases detected.</p>`; }
+
+  if (newAds.length) {
+    winners += `<h4>🆕 New Ads This Period</h4>
+      <ul>${newAds.slice(0,5).map(r=>`<li><strong>${truncate(r.name,40)}</strong> (${r.platform.name}) — Spend: ${fmt.currency(r.spend)} · CPM: $${r.cpm.toFixed(2)}</li>`).join('')}</ul>`;
+  }
+
+  /* ── RECOMMENDATIONS ── */
+  let recs = `<h4>Strategic Recommendations</h4><ol>`;
+
+  if (topEngWinners[0]) recs += `<li><strong>Scale winning ads.</strong> ${truncate(topEngWinners[0].name,40)} grew engagement by ${topEngWinners[0].engChg.toFixed(1)}% — increase budget allocation and consider replicating its creative format.</li>`;
+  if (topEngLosers[0] && topEngLosers[0].engChg < -15) recs += `<li><strong>Review declining ads.</strong> ${truncate(topEngLosers[0].name,40)} dropped ${Math.abs(topEngLosers[0].engChg).toFixed(1)}% in engagement. Refresh the creative or pause if trend continues.</li>`;
+  if (cCpm > pCpm * 1.1) recs += `<li><strong>Investigate rising CPM.</strong> Average CPM increased ${((cCpm-pCpm)/pCpm*100).toFixed(1)}% this period ($${pCpm.toFixed(2)} → $${cCpm.toFixed(2)}). Review audience targeting and ad placement settings.</li>`;
+  if (cCpm < pCpm * 0.9) recs += `<li><strong>Capitalize on CPM efficiency.</strong> CPM dropped ${((pCpm-cCpm)/pCpm*100).toFixed(1)}% — the audience targeting is working well. Consider increasing the overall budget to maximize reach at this lower cost.</li>`;
+  if (cEngR < pEngR * 0.85) recs += `<li><strong>Improve creative engagement.</strong> Engagement rate fell from ${pEngR.toFixed(2)}% to ${cEngR.toFixed(2)}%. Test new creative formats, stronger CTAs, or more targeted audience segments.</li>`;
+  if (cEngR > pEngR * 1.15) recs += `<li><strong>Double down on what's working.</strong> Engagement rate improved from ${pEngR.toFixed(2)}% to ${cEngR.toFixed(2)}% — identify the creative or audience changes that drove this and apply them to underperforming ads.</li>`;
+  if (endedAds.length > newAds.length) recs += `<li><strong>Replenish the ad portfolio.</strong> You retired ${endedAds.length} ads but only launched ${newAds.length} new ones. Keep a healthy pipeline of fresh creatives to prevent audience fatigue.</li>`;
+  if (C.spend > P.spend * 1.2) recs += `<li><strong>Validate increased spend ROI.</strong> Spend grew by ${((C.spend-P.spend)/P.spend*100).toFixed(1)}%. Ensure the key performance metrics (engagement rate, CPM, CTR) improved proportionally.</li>`;
+  if (C.spend < P.spend * 0.8) recs += `<li><strong>Review budget reduction impact.</strong> Spend dropped ${((P.spend-C.spend)/P.spend*100).toFixed(1)}%. If performance metrics are holding, this is efficient. If reach and engagement fell, consider restoring budget on top performers.</li>`;
+  if (cCtr < pCtr * 0.85) recs += `<li><strong>Optimize for clicks.</strong> CTR declined from ${pCtr.toFixed(2)}% to ${cCtr.toFixed(2)}%. Review ad copy, headlines, and landing page relevance to improve click-through performance.</li>`;
+  if (pCpc > 0 && cCpc > pCpc * 1.15) recs += `<li><strong>Reduce cost per click.</strong> CPC rose ${((cCpc-pCpc)/pCpc*100).toFixed(1)}% ($${pCpc.toFixed(2)} → $${cCpc.toFixed(2)}). Test bid strategies, refine audience targeting, or improve Quality Scores to lower click costs.</li>`;
+
+  recs += `</ol>`;
+
+  return { overview, winners, recs };
+}
+
+/* ════════════════════════════════════════════════
+   DRAG & DROP
+════════════════════════════════════════════════ */
+// Dashboard drop zone
+const dropZone = document.getElementById('dropZone');
+dropZone.addEventListener('dragover', (e) => { e.preventDefault(); dropZone.classList.add('drag-over'); });
+dropZone.addEventListener('dragleave', () => dropZone.classList.remove('drag-over'));
+dropZone.addEventListener('drop', (e) => {
+  e.preventDefault();
+  dropZone.classList.remove('drag-over');
+  const file = e.dataTransfer.files[0];
+  if (file) readFile(file);
+});
+
+// Comparison drop zones
+['Curr','Prev'].forEach(cap => {
+  const slot = cap.toLowerCase();
+  const zone = document.getElementById(`drop${cap}`);
+  zone.addEventListener('dragover',  e => { e.preventDefault(); zone.classList.add('drag-over'); });
+  zone.addEventListener('dragleave', () => zone.classList.remove('drag-over'));
+  zone.addEventListener('drop', e => {
+    e.preventDefault();
+    zone.classList.remove('drag-over');
+    const file = e.dataTransfer.files[0];
+    if (!file) return;
+    // Reuse input handler by creating a fake input-like object
+    const fakeInput = { files: [file] };
+    handleCompareFile(slot, fakeInput);
+  });
+});
+
+/* ════════════════════════════════════════════════
+   SAVED REPORTS (shared storage on the site)
+════════════════════════════════════════════════ */
+const API_REPORTS = '/api/reports';
+const MAX_SAVE_BYTES = 3 * 1024 * 1024;
+let savedReports = [];
+let savedPickerSlot = null;
+
+function bufToBase64(arrayBuffer) {
+  const bytes = new Uint8Array(arrayBuffer);
+  const CHUNK = 0x8000;
+  let binary = '';
+  for (let i = 0; i < bytes.length; i += CHUNK) {
+    binary += String.fromCharCode.apply(null, bytes.subarray(i, i + CHUNK));
+  }
+  return btoa(binary);
+}
+
+function fmtBytes(b) {
+  if (b >= 1e6) return (b / 1e6).toFixed(1) + ' MB';
+  if (b >= 1e3) return (b / 1e3).toFixed(0) + ' KB';
+  return b + ' B';
+}
+
+async function fetchSavedReports(showFeedback = false) {
+  try {
+    const res = await fetch(API_REPORTS);
+    const json = await res.json();
+    if (!res.ok) throw new Error(json.error || 'Could not load saved reports.');
+    savedReports = json.reports || [];
+    document.getElementById('savedReportsCard').style.display = '';
+    renderSavedList();
+    if (showFeedback) showToast('✅ Saved reports refreshed.', 'success');
+  } catch (err) {
+    // API unreachable (e.g. opened locally) — keep the card hidden unless it was already shown
+    if (document.getElementById('savedReportsCard').style.display !== 'none') {
+      document.getElementById('savedReportsList').innerHTML =
+        `<div class="saved-reports-empty">⚠️ ${esc(err.message)}</div>`;
+    }
+    if (showFeedback) showToast('❌ ' + err.message, 'error');
+  }
+}
+
+function renderSavedList() {
+  const listEl = document.getElementById('savedReportsList');
+  if (!savedReports.length) {
+    listEl.innerHTML = `<div class="saved-reports-empty">No saved reports yet. Upload a file, then click “💾 Save to Site”.</div>`;
+    return;
+  }
+  listEl.innerHTML = savedReports.map((r, i) => `
+    <div class="saved-report-row" onclick="loadSavedReport(${i})" title="Load this report">
+      <div class="saved-report-icon">📊</div>
+      <div class="saved-report-info">
+        <div class="saved-report-name">${esc(r.name)}</div>
+        <div class="saved-report-meta">Saved ${new Date(r.uploadedAt).toLocaleDateString('en-US', { year:'numeric', month:'short', day:'numeric' })} · ${fmtBytes(r.size)}</div>
+      </div>
+      <button class="saved-report-del" onclick="deleteSavedReport(event, ${i})" title="Delete from site">🗑️</button>
+    </div>
+  `).join('');
+}
+
+async function saveCurrentReport() {
+  if (!lastFileBuffer || !adsData.length) { showToast('⚠️ Upload a file first.', 'error'); return; }
+  if (lastFileBuffer.byteLength > MAX_SAVE_BYTES) {
+    showToast('❌ File is too large to save (max 3 MB).', 'error');
+    return;
+  }
+  const btn = document.getElementById('saveReportBtn');
+  btn.disabled = true;
+  btn.textContent = '⏳ Saving…';
+  try {
+    const res = await fetch(API_REPORTS, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name: fileName, data: bufToBase64(lastFileBuffer) }),
+    });
+    const json = await res.json();
+    if (!res.ok) throw new Error(json.error || 'Save failed.');
+    showToast('✅ Report saved to the site!', 'success');
+    fetchSavedReports();
+  } catch (err) {
+    showToast('❌ ' + err.message, 'error');
+  } finally {
+    btn.disabled = false;
+    btn.textContent = '💾 Save to Site';
+  }
+}
+
+async function loadSavedReport(index) {
+  const r = savedReports[index];
+  if (!r) return;
+  showToast('⏳ Loading ' + r.name + '…');
+  try {
+    const res = await fetch(r.url);
+    if (!res.ok) throw new Error('Could not download the file.');
+    const buf = await res.arrayBuffer();
+    loadDashboardBuffer(buf, r.name);
+    switchTab('dashboard');
+  } catch (err) {
+    showToast('❌ ' + err.message, 'error');
+  }
+}
+
+async function deleteSavedReport(event, index) {
+  event.stopPropagation();
+  const r = savedReports[index];
+  if (!r) return;
+  if (!confirm(`Delete "${r.name}" from the site? Everyone will lose access to it.`)) return;
+  try {
+    const res = await fetch(API_REPORTS + '?url=' + encodeURIComponent(r.url), { method: 'DELETE' });
+    const json = await res.json();
+    if (!res.ok) throw new Error(json.error || 'Delete failed.');
+    showToast('🗑️ Report deleted.', 'success');
+    fetchSavedReports();
+  } catch (err) {
+    showToast('❌ ' + err.message, 'error');
+  }
+}
+
+/* ── Saved picker for the comparison tab ── */
+function openSavedPicker(slot) {
+  savedPickerSlot = slot;
+  document.getElementById('savedPickerSub').textContent =
+    slot === 'curr' ? 'Load a saved report as the Selected Period.' : 'Load a saved report as the Comparison Period.';
+  const listEl = document.getElementById('savedPickerList');
+  if (!savedReports.length) {
+    listEl.innerHTML = `<div class="saved-reports-empty">No saved reports yet.</div>`;
+    fetchSavedReports().then(() => renderSavedPicker());
+  } else {
+    renderSavedPicker();
+  }
+  document.getElementById('savedPickerOverlay').classList.add('open');
+}
+
+function renderSavedPicker() {
+  const listEl = document.getElementById('savedPickerList');
+  if (!savedReports.length) {
+    listEl.innerHTML = `<div class="saved-reports-empty">No saved reports yet. Save one from the Insights tab first.</div>`;
+    return;
+  }
+  listEl.innerHTML = savedReports.map((r, i) => `
+    <div class="saved-report-row" onclick="pickSavedForCompare(${i})">
+      <div class="saved-report-icon">📊</div>
+      <div class="saved-report-info">
+        <div class="saved-report-name">${esc(r.name)}</div>
+        <div class="saved-report-meta">Saved ${new Date(r.uploadedAt).toLocaleDateString('en-US', { year:'numeric', month:'short', day:'numeric' })} · ${fmtBytes(r.size)}</div>
+      </div>
+    </div>
+  `).join('');
+}
+
+function closeSavedPicker() {
+  document.getElementById('savedPickerOverlay').classList.remove('open');
+  savedPickerSlot = null;
+}
+
+async function pickSavedForCompare(index) {
+  const r = savedReports[index];
+  const slot = savedPickerSlot;
+  if (!r || !slot) return;
+  closeSavedPicker();
+  showToast('⏳ Loading ' + r.name + '…');
+  try {
+    const res = await fetch(r.url);
+    if (!res.ok) throw new Error('Could not download the file.');
+    const buf = await res.arrayBuffer();
+    loadCompareBuffer(slot, buf, r.name);
+  } catch (err) {
+    showToast('❌ ' + err.message, 'error');
+  }
+}
+
+document.getElementById('savedPickerOverlay').addEventListener('click', e => {
+  if (e.target === document.getElementById('savedPickerOverlay')) closeSavedPicker();
+});
+
+// Load the shared list on page open
+fetchSavedReports();
+
+/* ════════════════════════════════════════════════
+   TOAST
+════════════════════════════════════════════════ */
+function showToast(msg, type = '') {
+  const t = document.createElement('div');
+  t.className = `toast ${type}`;
+  t.textContent = msg;
+  document.body.appendChild(t);
+  setTimeout(() => t.remove(), 3500);
+}
+</script>
+</body>
+</html>
