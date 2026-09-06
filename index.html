@@ -1428,8 +1428,9 @@ function processData(rows) {
       platform = match ? { name: match.name, color: match.color } : { name: String(row[cols.platform]), color: 'unknown' };
     } else {
       platform = guessPlatform(row);
-      if (platform.name === 'Unknown' && filePlatform) platform = filePlatform;
     }
+    // Column value was junk (e.g. "-") or nothing matched — fall back to the file name
+    if (platform.color === 'unknown' && filePlatform) platform = filePlatform;
 
     const adName    = cols.adName    ? String(row[cols.adName] || `Ad ${i+1}`)    : `Ad ${i+1}`;
     const link      = cols.link      ? String(row[cols.link]      || '')           : '';
@@ -2739,8 +2740,8 @@ function loadCompareBuffer(slot, arrayBuffer, name) {
           platform = match ? { name: match.name, color: match.color } : { name: String(row[cols.platform]), color:'unknown' };
         } else {
           platform = guessPlatform(row);
-          if (platform.name === 'Unknown' && filePlatform) platform = filePlatform;
         }
+        if (platform.color === 'unknown' && filePlatform) platform = filePlatform;
 
         const adName = cols.adName ? String(row[cols.adName] || `Ad ${i+1}`) : `Ad ${i+1}`;
         return { adName, platform, spend, impressions, reach, views, clicks, engagement, likes, comments, shares, saves, cpm, cpv };
