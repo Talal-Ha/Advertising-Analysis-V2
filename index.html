@@ -3304,7 +3304,7 @@ async function loadSavedReport(index) {
   if (!r) return;
   showToast('⏳ Loading ' + r.name + '…');
   try {
-    const res = await fetch(r.url);
+    const res = await fetch(API_REPORTS + '?file=' + encodeURIComponent(r.pathname));
     if (!res.ok) throw new Error('Could not download the file.');
     const buf = await res.arrayBuffer();
     loadDashboardBuffer(buf, r.name);
@@ -3320,7 +3320,7 @@ async function deleteSavedReport(event, index) {
   if (!r) return;
   if (!confirm(`Delete "${r.name}" from the site? Everyone will lose access to it.`)) return;
   try {
-    const res = await fetch(API_REPORTS + '?url=' + encodeURIComponent(r.url), { method: 'DELETE' });
+    const res = await fetch(API_REPORTS + '?file=' + encodeURIComponent(r.pathname), { method: 'DELETE' });
     const json = await res.json();
     if (!res.ok) throw new Error(json.error || 'Delete failed.');
     showToast('🗑️ Report deleted.', 'success');
@@ -3374,7 +3374,7 @@ async function pickSavedForCompare(index) {
   closeSavedPicker();
   showToast('⏳ Loading ' + r.name + '…');
   try {
-    const res = await fetch(r.url);
+    const res = await fetch(API_REPORTS + '?file=' + encodeURIComponent(r.pathname));
     if (!res.ok) throw new Error('Could not download the file.');
     const buf = await res.arrayBuffer();
     loadCompareBuffer(slot, buf, r.name);
