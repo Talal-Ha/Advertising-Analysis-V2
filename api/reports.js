@@ -27,13 +27,13 @@ export default async function handler(req, res) {
       } catch (e) {
         result = null;
       }
-      if (!result || !result.blob) {
+      if (!result || !result.stream) {
         // Public store fallback: redirect to the blob's public URL
         const { blobs } = await list({ prefix: pathname, limit: 1, ...auth });
         if (blobs.length) { res.setHeader('Cache-Control', 'no-store'); return res.redirect(302, blobs[0].url); }
         return res.status(404).json({ error: 'File not found.' });
       }
-      const buf = Buffer.from(await result.blob.arrayBuffer());
+      const buf = Buffer.from(await new Response(result.stream).arrayBuffer());
       res.setHeader('Content-Type', 'application/octet-stream');
       res.setHeader('Cache-Control', 'no-store');
       return res.status(200).send(buf);
