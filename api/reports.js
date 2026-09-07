@@ -4,27 +4,21 @@ const PREFIX = 'reports/';
 const MAX_FILE_BYTES = 3 * 1024 * 1024; // ~3MB raw file (base64 body stays under Vercel's 4.5MB limit)
 const ALLOWED_EXT = /\.(xlsx|xls|csv)$/i;
 
-// The token is BLOB_READ_WRITE_TOKEN by default, but a custom env-var prefix
-// chosen when connecting the store changes the name — accept any match.
+// Older stores inject BLOB_READ_WRITE_TOKEN (possibly under a custom prefix);
+// newer stores bind via BLOB_STORE_ID and the SDK authenticates on its own.
 function getBlobToken() {
   if (process.env.BLOB_READ_WRITE_TOKEN) return process.env.BLOB_READ_WRITE_TOKEN;
   const key = Object.keys(process.env).find(k => k.endsWith('_READ_WRITE_TOKEN'));
-  return key ? process.env[key] : null;
+  return key ? process.env[key] : undefined;
 }
 
 export default async function handler(req, res) {
   try {
     const token = getBlobToken();
-    if (!token) {
-      return res.status(503).json({
-        error: 'Storage is not configured yet. Connect a Blob store to this project in the Vercel dashboard.',
-        v: 3,
-        envHint: Object.keys(process.env).filter(k => /BLOB|READ_WRITE|STORAGE|DATABASE|POSTGRES|KV_|EDGE_CONFIG/i.test(k)),
-      });
-    }
+    const auth = token ? { token } : {};
 
     if (req.method === 'GET') {
-      const { blobs } = await list({ prefix: PREFIX, limit: 500, token });
+      const { blobs } = await list({ prefix: PREFIX, limit: 500, ...auth });
       const reports = blobs
         .map(b => ({
           url: b.url,
@@ -50,7 +44,7 @@ export default async function handler(req, res) {
       const blob = await put(`${PREFIX}${Date.now()}-${safeName}`, buffer, {
         access: 'public',
         addRandomSuffix: false,
-        token,
+        ...auth,
       });
       return res.status(200).json({
         url: blob.url,
@@ -66,13 +60,17 @@ export default async function handler(req, res) {
       if (!/\.blob\.vercel-storage\.com\//.test(url) || !url.includes('/' + PREFIX)) {
         return res.status(400).json({ error: 'Invalid report url.' });
       }
-      await del(url, { token });
+      await del(url, auth);
       return res.status(200).json({ ok: true });
     }
 
     res.setHeader('Allow', 'GET, POST, DELETE');
     return res.status(405).json({ error: 'Method not allowed.' });
   } catch (err) {
-    return res.status(500).json({ error: err.message || 'Server error.' });
+    const msg = err.message || 'Server error.';
+    if (/token|credential|unauthoriz|forbidden|access/i.test(msg)) {
+      return res.status(503).json({ error: 'Storage is not reachable: ' + msg });
+    }
+    return res.status(500).json({ error: msg });
   }
 }
