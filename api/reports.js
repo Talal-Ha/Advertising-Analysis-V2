@@ -16,7 +16,11 @@ export default async function handler(req, res) {
   try {
     const token = getBlobToken();
     if (!token) {
-      return res.status(503).json({ error: 'Storage is not configured yet. Connect a Blob store to this project in the Vercel dashboard.' });
+      return res.status(503).json({
+        error: 'Storage is not configured yet. Connect a Blob store to this project in the Vercel dashboard.',
+        v: 3,
+        envHint: Object.keys(process.env).filter(k => /BLOB|READ_WRITE|STORAGE|DATABASE|POSTGRES|KV_|EDGE_CONFIG/i.test(k)),
+      });
     }
 
     if (req.method === 'GET') {
