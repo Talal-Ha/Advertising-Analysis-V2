@@ -53,7 +53,9 @@
       display: flex;
       align-items: center;
       gap: 14px;
+      cursor: pointer;
     }
+    .navbar-brand:hover .navbar-title { opacity: 0.85; }
     .navbar-logo {
       height: 58px;
       display: flex;
@@ -155,6 +157,19 @@
     .upload-hero h1 { font-size: 36px; font-weight: 800; letter-spacing: -1px; margin-bottom: 12px; }
     .upload-hero h1 span { background: linear-gradient(135deg, var(--accent), var(--accent2)); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; color: transparent; }
     .upload-hero p { font-size: 16px; color: var(--subtle); margin-bottom: 40px; line-height: 1.6; }
+
+    .upload-row {
+      display: flex;
+      align-items: stretch;
+      justify-content: center;
+      gap: 24px;
+      width: 100%;
+      max-width: 940px;
+    }
+    @media(max-width: 860px) {
+      .upload-row { flex-direction: column-reverse; align-items: center; }
+      .upload-row .saved-reports { width: 100%; max-width: 520px; }
+    }
 
     .upload-zone {
       width: 100%;
@@ -703,15 +718,17 @@
 
     /* ── SAVED REPORTS ───────────────────────── */
     .saved-reports {
-      width: 100%;
-      max-width: 520px;
-      margin-top: 24px;
+      width: 380px;
+      flex-shrink: 0;
       background: var(--surface);
       border: 1px solid var(--border);
       border-radius: 16px;
       overflow: hidden;
       text-align: left;
+      display: flex;
+      flex-direction: column;
     }
+    .saved-reports .saved-reports-head { flex-shrink: 0; }
     .saved-reports-head {
       display: flex;
       align-items: center;
@@ -720,7 +737,7 @@
       border-bottom: 1px solid var(--border);
     }
     .saved-reports-head h3 { font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.7px; color: var(--subtle); }
-    .saved-reports-list { max-height: 300px; overflow-y: auto; }
+    .saved-reports-list { flex: 1; min-height: 0; max-height: 340px; overflow-y: auto; }
     .saved-report-row {
       display: flex;
       align-items: center;
@@ -817,11 +834,12 @@
 
 <!-- ── NAVBAR ─────────────────────────────────── -->
 <nav class="navbar">
-  <div class="navbar-brand">
+  <div class="navbar-brand" onclick="goHome()" title="Go to home page">
     <div class="navbar-logo"><img src="Logo.png" alt="Dalil Analytics"></div>
     <div class="navbar-title">Dalil <span>Analytics</span></div>
   </div>
   <div class="navbar-actions">
+    <button class="btn btn-ghost btn-sm" onclick="goHome()">🏠 Home</button>
     <label class="btn btn-primary btn-sm" style="cursor:pointer;">
       📂 New File
       <input type="file" accept=".xlsx,.xls,.csv" style="display:none;" onchange="handleFileInput(this)">
@@ -847,16 +865,10 @@
   <div class="upload-hero">
     <h1>Advertising <span>Insights</span></h1>
     <p>Upload your advertising data and turn raw numbers into clear performance insights, spend breakdowns, smart recommendations, and interactive visual reports.</p>
+  </div>
 
-    <div class="upload-zone" id="dropZone">
-      <input type="file" accept=".xlsx,.xls,.csv" id="fileInput" onchange="handleFileInput(this)" />
-      <div class="upload-icon">📁</div>
-      <h3>Drop your Excel file here</h3>
-      <p>or click to browse your files</p>
-      <div class="badge">.xlsx · .xls · .csv</div>
-    </div>
-
-    <!-- Saved Reports -->
+  <div class="upload-row">
+    <!-- Saved Reports (left of the upload box when present) -->
     <div class="saved-reports" id="savedReportsCard" style="display:none;">
       <div class="saved-reports-head">
         <h3>💾 Saved Reports</h3>
@@ -865,6 +877,14 @@
       <div class="saved-reports-list" id="savedReportsList">
         <div class="saved-reports-empty">Loading saved reports…</div>
       </div>
+    </div>
+
+    <div class="upload-zone" id="dropZone">
+      <input type="file" accept=".xlsx,.xls,.csv" id="fileInput" onchange="handleFileInput(this)" />
+      <div class="upload-icon">📁</div>
+      <h3>Drop your Excel file here</h3>
+      <p>or click to browse your files</p>
+      <div class="badge">.xlsx · .xls · .csv</div>
     </div>
   </div>
 </div>
@@ -1202,20 +1222,16 @@
               <th>Platform</th>
               <th>Prev Spend</th>
               <th>Curr Spend</th>
-              <th>Spend Δ</th>
               <th>Prev Impr.</th>
               <th>Curr Impr.</th>
               <th>Prev CPM</th>
               <th>Curr CPM</th>
-              <th>CPM Δ</th>
               <th>Prev Views</th>
               <th>Curr Views</th>
               <th>Prev CPV</th>
               <th>Curr CPV</th>
               <th>Prev Eng.</th>
               <th>Curr Eng.</th>
-              <th>Eng. Δ</th>
-              <th>Status</th>
             </tr>
           </thead>
           <tbody id="compAdsBody"></tbody>
@@ -1534,9 +1550,9 @@ function parseAnyDate(val) {
   return null;
 }
 
-function extractInsightsDate(rows) {
+function extractInsightsDate(rows, fname = fileName) {
   // 1. Filename first
-  const fn = fileName.toLowerCase();
+  const fn = String(fname || '').toLowerCase();
   for (let i = 0; i < MONTH_NAMES.length; i++) {
     if (fn.includes(MONTH_NAMES[i].toLowerCase())) {
       const yr = fn.match(/20\d{2}/);
@@ -2659,6 +2675,13 @@ function switchTab(tab) {
   document.getElementById('tabBtnComparison').classList.toggle('active', tab === 'comparison');
 }
 
+function goHome() {
+  switchTab('dashboard');
+  document.getElementById('dashboard').style.display = 'none';
+  document.getElementById('uploadSection').style.display = '';
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
 /* ════════════════════════════════════════════════
    COMPARISON STATE
 ════════════════════════════════════════════════ */
@@ -2706,8 +2729,8 @@ function loadCompareBuffer(slot, arrayBuffer, name) {
 
       CMP[slot].rows     = rows;
       CMP[slot].fileName = name;
-      CMP[slot].period   = extractInsightsDate(rows) !== '—'
-        ? extractInsightsDate(rows)
+      CMP[slot].period   = extractInsightsDate(rows, name) !== '—'
+        ? extractInsightsDate(rows, name)
         : name.replace(/\.[^.]+$/, '');
 
       // Reuse existing processData logic but store in CMP
@@ -2993,42 +3016,23 @@ function renderCompAdsTable() {
   });
 
   const cv = (v, fmtFn) => v !== null && v !== undefined ? fmtFn(v) : '—';
-  const deltaCell = (curr, prev, fmtFn, lowerIsBetter=false) => {
-    if (curr == null || prev == null) return `<td style="color:var(--muted)">—</td>`;
-    const diff = curr - prev;
-    const up = lowerIsBetter ? diff < 0 : diff > 0;
-    const cls = Math.abs(diff) < 0.001 ? 'change-flat' : up ? 'change-up' : 'change-down';
-    const arrow = Math.abs(diff) < 0.001 ? '→' : up ? '▲' : '▼';
-    const pct = prev ? ((diff/prev)*100).toFixed(1) : '—';
-    return `<td><span class="change-badge ${cls}">${arrow} ${pct}%</span></td>`;
-  };
 
-  const statusBadge = s => {
-    if (s === 'new')   return `<span class="change-badge change-up">🆕 New</span>`;
-    if (s === 'ended') return `<span class="change-badge change-down">⏹ Ended</span>`;
-    return `<span class="change-badge change-flat">↔ Both</span>`;
-  };
-
-  document.getElementById('compAdsBody').innerHTML = rows.map(({name, c, p, status}) => `
+  document.getElementById('compAdsBody').innerHTML = rows.map(({name, c, p}) => `
     <tr>
       <td style="max-width:220px;overflow:hidden;text-overflow:ellipsis;color:var(--text);font-weight:600;" title="${esc(name)}">${esc(truncate(name,36))}</td>
       <td>${(c||p) ? `<span class="platform-badge platform-${(c||p).platform.color}">${platformIcon((c||p).platform.name)} ${(c||p).platform.name}</span>` : '—'}</td>
       <td style="color:var(--muted)">${cv(p?.spend, v=>fmt.currency(v))}</td>
       <td style="color:var(--accent)">${cv(c?.spend, v=>fmt.currency(v))}</td>
-      ${deltaCell(c?.spend,    p?.spend)}
       <td style="color:var(--muted)">${cv(p?.impressions, fmt.rawN)}</td>
       <td>${cv(c?.impressions, fmt.rawN)}</td>
       <td style="color:var(--muted)">${cv(p?.cpm, v=>'$'+v.toFixed(2))}</td>
       <td style="color:var(--yellow)">${cv(c?.cpm, v=>'$'+v.toFixed(2))}</td>
-      ${deltaCell(c?.cpm,      p?.cpm, v=>v.toFixed(2), true)}
       <td style="color:var(--muted)">${cv(p?.views, fmt.rawN)}</td>
       <td>${cv(c?.views, fmt.rawN)}</td>
       <td style="color:var(--muted)">${cv(p?.cpv, v=>'$'+v.toFixed(5))}</td>
       <td style="color:var(--red)">${cv(c?.cpv, v=>'$'+v.toFixed(5))}</td>
       <td style="color:var(--muted)">${cv(p?.engagement, fmt.rawN)}</td>
       <td style="color:var(--accent2)">${cv(c?.engagement, fmt.rawN)}</td>
-      ${deltaCell(c?.engagement, p?.engagement)}
-      <td>${statusBadge(status)}</td>
     </tr>
   `).join('');
 }
@@ -3157,7 +3161,7 @@ function buildExecSummary(C, P, cCpm, pCpm, cCpv, pCpv, cCtr, pCtr, cEngR, pEngR
 
   if (newAds.length) {
     winners += `<h4>🆕 New Ads This Period</h4>
-      <ul>${newAds.slice(0,5).map(r=>`<li><strong>${truncate(r.name,40)}</strong> (${r.platform.name}) — Spend: ${fmt.currency(r.spend)} · CPM: $${r.cpm.toFixed(2)}</li>`).join('')}</ul>`;
+      <ul>${newAds.slice(0,5).map(r=>`<li><strong>${truncate(r.adName,40)}</strong> (${r.platform.name}) — Spend: ${fmt.currency(r.spend)} · CPM: $${r.cpm.toFixed(2)}</li>`).join('')}</ul>`;
   }
 
   /* ── RECOMMENDATIONS ── */
@@ -3241,7 +3245,8 @@ async function fetchSavedReports(showFeedback = false) {
     const json = await res.json();
     if (!res.ok) throw new Error(json.error || 'Could not load saved reports.');
     savedReports = json.reports || [];
-    document.getElementById('savedReportsCard').style.display = '';
+    // Only show the side panel when there is something to list
+    document.getElementById('savedReportsCard').style.display = savedReports.length ? '' : 'none';
     renderSavedList();
     if (showFeedback) showToast('✅ Saved reports refreshed.', 'success');
   } catch (err) {
